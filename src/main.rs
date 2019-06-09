@@ -69,36 +69,33 @@ fn main() {
     }
     else {
         let switch = Switch::new();
-        let switch_clone = switch.clone();
-
         let addr = "0.0.0.0:3777".parse().unwrap();
         let listener = tokio::net::TcpListener::bind(&addr).expect("unable to bind TCP listener");
         let server = listener.incoming()
             .map_err(|e| eprintln!("accept failed = {:?}", e))
-            .for_each(move |s| {
-                // Rust is absolute savage!
-                let switch_clone2 = switch_clone.clone();
+            .for_each({ let switch = switch.clone(); move |s| {
                 let proto = SprinklerProto::new(s);
                 let handle_conn = proto
                     .into_future()
                     .map_err(|(e, _)| e)
-                    .and_then(move |(header, proto)| {
-                        if let Some(header) = header {
-                            Either::A(SprinklerRelay{ proto, header, switch: switch_clone2 })
+                    .and_then({ let switch = switch.clone(); move |(header, proto)| {
+                        match header {
+                            Some(header) => Either::A(SprinklerRelay{ proto, header, switch }),
+                            None => Either::B(future::ok(())) // Connection dropped?
                         }
-                        else {
-                            Either::B(future::ok(())) // Connection dropped?
-                        }
-                    })
+                    }})
                     .map_err(|e| {
                         error!("connection error = {:?}", e);
                     });
                 tokio::spawn(handle_conn)
-            });
+            }});
         {
-            let mut swith_init = switch.inner.lock().unwrap();
+            let mut switch_init = switch.inner.lock().unwrap();
             for i in triggers {
-                swith_init.insert(i.id(), i.activate_master());
+                match i.activate_master() {
+                    ActivationResult::RealtimeMonitor(monitor) => { switch_init.insert(i.id(), Transmitter::Synchronous(monitor)); },
+                    ActivationResult::AsyncMonitor(monitor) => {}
+                }
             }
         }
         tokio::run(server);

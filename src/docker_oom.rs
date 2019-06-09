@@ -1,9 +1,7 @@
 use std::io::Write;
-use std::thread;
-use std::sync::{mpsc, Arc, Mutex};
-use futures::future::{self, Either};
+use std::sync::{Arc, Mutex};
 use tokio::prelude::*;
-use super::{Sprinkler, SprinklerProto, SprinklerOptions, Message};
+use super::*;
 
 #[derive(Clone)]
 pub struct DockerOOM {
@@ -27,34 +25,50 @@ impl Sprinkler for DockerOOM {
         &self.options._hostname
     }
 
-    fn activate_master(&self) -> mpsc::Sender<Message> {
-        unimplemented!();
-        // 
+    fn activate_master(&self) -> ActivationResult {
+        // let clone = self.clone();
+        let (tx, rx) = futures::sync::mpsc::channel::<Message>(512);
+        tokio::run({
+            rx.for_each(|message| {
+                println!("Got new message");
 
-
-        let clone = self.clone();
-        let (tx, rx) = mpsc::channel();
-        thread::spawn(move || {
-            let mut state = false;
-            loop {
-                // detect oom
-                let state_recv = false; //rx.try_recv().is_ok();
+            // let mut last_seen = chrono::Local::now();
+            //     // detect oom
+            //     let state_recv = if let Ok(message) = rx.try_recv() {
+            //         last_seen = chrono::Local::now();
+            //         // message.body == COMMCHK
+            //         debug!("{}", message.body);
+            //         true
+            //     } else {
+            //         if state {
+            //             // Tolerance (secs) for accumulated network delays
+            //             const TOLERANCE: i64 = 2;
+            //             if chrono::Local::now() - last_seen < chrono::Duration::seconds((clone.options.heart_beat as i64)+TOLERANCE)  {
+            //                 debug!("sprinkler[{}] (CommCheck) on {} may be delayed.", clone.id(), clone.hostname());
+            //                 true
+            //             }
+            //             else { false }
+            //         }
+            //         else { false }
+            //     };
                 
-                if state != state_recv {
-                    state = state_recv;
-                    // lookup pod
-                    // kill pod, kill continer, rm --force
-                    // info!(
-                    //     "sprinkler[{}] (CommCheck) {} => {}",
-                    //     clone.id(), clone.hostname(), if state {"online"} else {"offline"}
-                    // );
-                }
-                thread::sleep(std::time::Duration::from_secs(clone.options.heart_beat));
-                if *clone._deactivate.lock().unwrap() { break; }
-                else { trace!("sprinkler[{}] heartbeat", clone.id()); }
-            }
+            //     if state != state_recv {
+            //         state = state_recv;
+            //         // lookup pod
+            //         // kill pod, kill continer, rm --force
+            //         // info!(
+            //         //     "sprinkler[{}] (CommCheck) {} => {}",
+            //         //     clone.id(), clone.hostname(), if state {"online"} else {"offline"}
+            //         // );
+            //     }
+            //     thread::sleep(std::time::Duration::from_secs(clone.options.heart_beat));
+            //     if *clone._deactivate.lock().unwrap() { break; }
+            //     else { trace!("sprinkler[{}] heartbeat", clone.id()); }
+
+                Ok(())
+            })
         });
-        tx
+        ActivationResult::AsyncMonitor(tx)
     }
 
     fn activate_agent(&self) {
