@@ -7,6 +7,8 @@ use std::thread;
 use futures::future::{self, Either};
 use tokio::prelude::*;
 use sprinkler_api::*;
+mod docker_oom;
+use docker_oom::DockerOOM;
 
 const FNAME_CONFIG: &str = "/etc/sprinkler.conf";
 
@@ -46,6 +48,7 @@ fn main() {
     // parse FNAME_CONFIG and add triggers
     let triggers: Vec<Box<dyn Sprinkler>> = vec![
         // DockerOOM { hostname: String::from("k-prod-cpu-1.dsa.lan") }
+        Box::new(DockerOOM::new(1, String::from("alex-jetson-tx2"))),
         Box::new(CommCheck::new(0, String::from("alex-jetson-tx2"))),
         // box CommCheck::new(1, String::from("localhost")),
         // box DockerOOM::new(2, String::from("latitude-5289"))

@@ -1,6 +1,8 @@
 use std::io::Write;
 use std::thread;
 use std::sync::{mpsc, Arc, Mutex};
+use futures::future::{self, Either};
+use tokio::prelude::*;
 use super::{Sprinkler, SprinklerProto, Message};
 
 #[derive(Clone)]
@@ -60,10 +62,17 @@ impl Sprinkler for DockerOOM {
     }
 
     fn activate_agent(&self) {
-        let clone = self.clone();
-        thread::spawn(move || loop {
-            //run docker events
-        });
+        let docker = shiplift::Docker::new();
+        // let ref now = chrono::Local::now().timestamp() as u64;
+        // let ref event_opts = shiplift::EventsOptions::builder().since(now).build();
+        let monitor = docker
+            .events(&Default::default())
+            .for_each(|e| {
+                println!("event -> {:?}", e);
+                Ok(())
+            })
+            .map_err(|e| error!("{}", e));
+        tokio::run(monitor);
     }
 
     fn deactivate(&self) {
