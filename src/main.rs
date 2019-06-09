@@ -45,16 +45,14 @@ fn main() {
     
     setup_logger(args.occurrences_of("VERBOSE")).expect("Logger Error.");
 
+    const MASTER_ADDR: &str = "192.168.0.3:3777";
+    let mut builder = SprinklerBuilder::new(SprinklerOptions{ master_addr: String::from(MASTER_ADDR), ..Default::default() });
+
     // parse FNAME_CONFIG and add triggers
     let triggers: Vec<Box<dyn Sprinkler>> = vec![
-        // DockerOOM { hostname: String::from("k-prod-cpu-1.dsa.lan") }
-        Box::new(DockerOOM::new(1, String::from("alex-jetson-tx2"))),
-        Box::new(CommCheck::new(0, String::from("alex-jetson-tx2"))),
-        // box CommCheck::new(1, String::from("localhost")),
-        // box DockerOOM::new(2, String::from("latitude-5289"))
+        Box::new(builder.build::<CommCheck>(String::from("alex-jetson-tx2"))),
+        Box::new(builder.build::<DockerOOM>(String::from("alex-jetson-tx2")))
     ];
-
-    // let triggers: Vec<&Sprinkler> = Vec::new();
 
     if args.is_present("AGENT") {
         if let Ok(hostname) = sys_info::hostname() {
@@ -92,8 +90,6 @@ fn main() {
                             Either::B(future::ok(())) // Connection dropped?
                         }
                     })
-                    // Task futures have an error of type `()`, this ensures we handle the
-                    // error. We do this by printing the error to STDOUT.
                     .map_err(|e| {
                         error!("connection error = {:?}", e);
                     });

@@ -3,32 +3,28 @@ use std::thread;
 use std::sync::{mpsc, Arc, Mutex};
 use futures::future::{self, Either};
 use tokio::prelude::*;
-use super::{Sprinkler, SprinklerProto, Message};
+use super::{Sprinkler, SprinklerProto, SprinklerOptions, Message};
 
 #[derive(Clone)]
 pub struct DockerOOM {
-    _id: usize,
-    _hostname: String,
+    options: Arc<SprinklerOptions>,
     _deactivate: Arc<Mutex<bool>>
 }
 
-impl DockerOOM {
-    pub fn new(id: usize, hostname: String) -> Self {
+impl Sprinkler for DockerOOM {
+    fn build(options: SprinklerOptions) -> Self {
         DockerOOM {
-            _id: id,
-            _hostname: hostname,
+            options: Arc::new(options),
             _deactivate: Arc::new(Mutex::new(false))
         }
     }
-}
 
-impl Sprinkler for DockerOOM {
     fn id(&self) -> usize {
-        self._id
+        self.options._id
     }
 
     fn hostname(&self) -> &str {
-        &self._hostname
+        &self.options._hostname
     }
 
     fn activate_master(&self) -> mpsc::Sender<Message> {
@@ -53,7 +49,7 @@ impl Sprinkler for DockerOOM {
                     //     clone.id(), clone.hostname(), if state {"online"} else {"offline"}
                     // );
                 }
-                thread::sleep(std::time::Duration::from_secs(super::HEART_BEAT));
+                thread::sleep(std::time::Duration::from_secs(clone.options.heart_beat));
                 if *clone._deactivate.lock().unwrap() { break; }
                 else { trace!("sprinkler[{}] heartbeat", clone.id()); }
             }
