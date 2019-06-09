@@ -1,0 +1,18 @@
+[package]
+name = "sprinkler-k8s"
+version = "0.1.0"
+authors = ["Alex Yang <aleozlx@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+log = "0.4"
+fern = "0.5"
+chrono = "0.4"
+clap = "2.32.0"
+# regex = "1"
+sys-info = "0.5"
+tokio = "0.1"
+# byteorder = "1.3"
+# bytes = "0.4"
+futures = "0.1"
+sprinkler = { git = "https://github.com/aleozlx/sprinkler.git" }
