@@ -27,14 +27,6 @@ fn main() {
         // Box::new(builder.build::<DockerOOM>(String::from("alex-jetson-tx2")))
     ];
 
-    #[cfg(not(feature = "master"))] {
-        sprinkler_api::agent(&sprinklers);
-        sprinkler_api::loop_forever();
-    }
-    #[cfg(feature = "master")] {
-        let switch = Switch::new();
-        switch.connect_all(&sprinklers);
-        let addr = "0.0.0.0:3777".parse().unwrap();
-        sprinkler_api::server(&addr, &switch);
-    }
+    sprinkler_api::agent(&sprinklers);
+    sprinkler_api::loop_forever();
 }

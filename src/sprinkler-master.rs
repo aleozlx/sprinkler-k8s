@@ -6,6 +6,7 @@ extern crate log;
 use sprinkler_api::*;
 mod docker_oom;
 use docker_oom::DockerOOM;
+mod config;
 
 fn main() {
     let args = clap_app!(sprinkler =>
@@ -15,7 +16,7 @@ fn main() {
             (@arg VERBOSE: --verbose -v ... "Logging verbosity")
         ).get_matches();
     
-    setup_logger(args.occurrences_of("VERBOSE")).expect("Logger Error.");
+    config::setup_logger(args.occurrences_of("VERBOSE")).expect("Logger Error.");
 
     const MASTER_ADDR: &str = "bridge.dsa.lan:3777";
     let mut builder = SprinklerBuilder::new(SprinklerOptions{ master_addr: String::from(MASTER_ADDR), ..Default::default() });
@@ -26,14 +27,8 @@ fn main() {
         // Box::new(builder.build::<DockerOOM>(String::from("alex-jetson-tx2")))
     ];
 
-    #[cfg(not(feature = "master"))] {
-        sprinkler_api::agent(&sprinklers);
-        sprinkler_api::loop_forever();
-    }
-    #[cfg(feature = "master")] {
-        let switch = Switch::new();
-        switch.connect_all(&sprinklers);
-        let addr = "0.0.0.0:3777".parse().unwrap();
-        sprinkler_api::server(&addr, &switch);
-    }
+    let switch = Switch::new();
+    switch.connect_all(&sprinklers);
+    let addr = MASTER_ADDR.parse().unwrap();
+    sprinkler_api::server(&addr, &switch);
 }
