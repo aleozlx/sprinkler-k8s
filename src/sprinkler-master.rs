@@ -23,7 +23,7 @@ fn main() {
 
     // parse FNAME_CONFIG and add triggers
     let sprinklers: Vec<Box<dyn Sprinkler>> = vec![
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-1"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-1.dsa.lan"))),
         // Box::new(builder.build::<DockerOOM>(String::from("alex-jetson-tx2")))
     ];
 
