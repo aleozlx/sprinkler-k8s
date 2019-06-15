@@ -13,5 +13,5 @@ Kubernetes DoS prevention
 ## Build
 
 ```
-cargo build --features sprinkler/master
+cargo build --release --features sprinkler/master
 ```

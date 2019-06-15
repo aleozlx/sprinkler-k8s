@@ -29,6 +29,6 @@ fn main() {
 
     let switch = Switch::new();
     switch.connect_all(&sprinklers);
-    let addr = MASTER_ADDR.parse().unwrap();
+    let addr = "0.0.0.0:3777".parse().unwrap();
     sprinkler_api::server(&addr, &switch);
 }
