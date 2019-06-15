@@ -17,13 +17,13 @@ fn main() {
     
     setup_logger(args.occurrences_of("VERBOSE")).expect("Logger Error.");
 
-    const MASTER_ADDR: &str = "192.168.0.3:3777";
+    const MASTER_ADDR: &str = "bridge.dsa.lan:3777";
     let mut builder = SprinklerBuilder::new(SprinklerOptions{ master_addr: String::from(MASTER_ADDR), ..Default::default() });
 
     // parse FNAME_CONFIG and add triggers
     let sprinklers: Vec<Box<dyn Sprinkler>> = vec![
-        Box::new(builder.build::<CommCheck>(String::from("alex-jetson-tx2"))),
-        Box::new(builder.build::<DockerOOM>(String::from("alex-jetson-tx2")))
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-1"))),
+        // Box::new(builder.build::<DockerOOM>(String::from("alex-jetson-tx2")))
     ];
 
     #[cfg(not(feature = "master"))] {
