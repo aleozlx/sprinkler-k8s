@@ -4,8 +4,14 @@ version = "0.1.0"
 authors = ["Alex Yang <aleozlx@gmail.com>"]
 edition = "2018"
 
-[features]
-master = ["sprinkler/master"]
+[[bin]]
+name = "sprinkler-master"
+path = "src/sprinkler-master.rs"
+required-features = ["sprinkler/master"]
+
+[[bin]]
+name = "sprinkler-agent"
+path = "src/sprinkler-agent.rs"
 
 [dependencies]
 log = "0.4"
