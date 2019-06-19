@@ -78,7 +78,7 @@ impl Sprinkler for DockerOOM {
         let monitor = docker
             .events(&Default::default())
             .for_each(|e| {
-                if e.typ == "container" {
+                if e.typ == "container" && e.action == "oom" {
                     println!("event -> {:?}", e);
                 }
                 Ok(())
