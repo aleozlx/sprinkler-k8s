@@ -79,7 +79,7 @@ impl Sprinkler for DockerOOM {
             .events(&Default::default())
             .for_each(|e| {
                 if e.typ == "container" && e.action == "oom" {
-                    println!("event -> {:?}", e.actor.atrributes["io.kubernetes.pod.name"]);
+                    println!("event -> {:?}", e.actor.attributes["io.kubernetes.pod.name"]);
                 }
                 Ok(())
             })
