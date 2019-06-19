@@ -78,7 +78,9 @@ impl Sprinkler for DockerOOM {
         let monitor = docker
             .events(&Default::default())
             .for_each(|e| {
-                println!("event -> {:?}", e);
+                if e.typ == "container" {
+                    println!("event -> {:?}", e);
+                }
                 Ok(())
             })
             .map_err(|e| error!("{}", e));
