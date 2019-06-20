@@ -30,7 +30,7 @@ enum AnomalyTransition {
 }
 
 use std::ops::Shr;
-impl Shr<Scalar> for Anomaly {
+impl Shr<Anomaly> for Anomaly {
     type Output = AnomalyTransition;
     fn shr(self, rhs: Self) -> Option<Output> {
         match (self, rhs) {
@@ -63,7 +63,7 @@ impl Default for EventRateMeter {
             t0: chrono::Local::now(),
             last_rate: 0f32,
             interval: chrono::Duration::seconds(1),
-            rating: EventRateAnomaly::Negative
+            rating: Anomaly::Negative
         }
     }
 }
@@ -89,8 +89,6 @@ impl EventRateMeter {
     fn state(&self) -> Anomaly {
         self._state
     }
-
-    fn state_override()
 }
 
 impl Sprinkler for DockerOOM {
