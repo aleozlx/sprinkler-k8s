@@ -29,6 +29,15 @@ enum AnomalyTransition {
     HasGivenUp      // OutOfControl -> OutOfControl
 }
 
+impl AnomalyTransition {
+    pub fn is_important(&self) -> bool {
+        match self {
+            AnomalyTransition::Occurred | Anomaly::Disappeared | AnomalyTransition::Fixed | AnomalyTransition::GaveUp => true,
+            _ => false
+        }
+    }
+}
+
 use std::ops::Shr;
 impl Shr<Anomaly> for Anomaly {
     type Output = Option<AnomalyTransition>;
@@ -70,7 +79,7 @@ impl Default for EventRateMeter {
 }
 
 impl EventRateMeter {
-    fn tick(&mut self) {
+    pub fn tick(&mut self) {
         self.count += 1;
         if chrono::Local::now() - self.t0 > self.interval {
             self.last_rate = self.read();
@@ -82,12 +91,12 @@ impl EventRateMeter {
         (self.interval.num_milliseconds() as f32) / 1e3
     }
 
-    fn read(&self) -> f32 {
+    pub fn read(&self) -> f32 {
         if self.count == 0 { self.last_rate }
         else { (self.count as f32) / self.dt() }
     }
 
-    fn state(&self) -> Anomaly {
+    pub fn state(&self) -> Anomaly {
         self._state
     }
 }
