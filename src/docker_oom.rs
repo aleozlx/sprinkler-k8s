@@ -32,7 +32,7 @@ enum AnomalyTransition {
 impl AnomalyTransition {
     pub fn is_important(&self) -> bool {
         match self {
-            AnomalyTransition::Occurred | Anomaly::Disappeared | AnomalyTransition::Fixed | AnomalyTransition::GaveUp => true,
+            AnomalyTransition::Occurred | AnomalyTransition::Disappeared | AnomalyTransition::Fixed | AnomalyTransition::GaveUp => true,
             _ => false
         }
     }
