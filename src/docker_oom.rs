@@ -182,45 +182,10 @@ impl Sprinkler for DockerOOM {
     }
 
     fn activate_master(&self) -> ActivationResult {
-        // let clone = self.clone();
         let (tx, rx) = futures::sync::mpsc::channel::<Message>(512);
         tokio::run({
             rx.for_each(|message| {
                 println!("Got new message");
-
-            // let mut last_seen = chrono::Local::now();
-            //     // detect oom
-            //     let state_recv = if let Ok(message) = rx.try_recv() {
-            //         last_seen = chrono::Local::now();
-            //         // message.body == COMMCHK
-            //         debug!("{}", message.body);
-            //         true
-            //     } else {
-            //         if state {
-            //             // Tolerance (secs) for accumulated network delays
-            //             const TOLERANCE: i64 = 2;
-            //             if chrono::Local::now() - last_seen < chrono::Duration::seconds((clone.options.heart_beat as i64)+TOLERANCE)  {
-            //                 debug!("sprinkler[{}] (CommCheck) on {} may be delayed.", clone.id(), clone.hostname());
-            //                 true
-            //             }
-            //             else { false }
-            //         }
-            //         else { false }
-            //     };
-                
-            //     if state != state_recv {
-            //         state = state_recv;
-            //         // lookup pod
-            //         // kill pod, kill continer, rm --force
-            //         // info!(
-            //         //     "sprinkler[{}] (CommCheck) {} => {}",
-            //         //     clone.id(), clone.hostname(), if state {"online"} else {"offline"}
-            //         // );
-            //     }
-            //     thread::sleep(std::time::Duration::from_secs(clone.options.heart_beat));
-            //     if *clone._deactivate.lock().unwrap() { break; }
-            //     else { trace!("sprinkler[{}] heartbeat", clone.id()); }
-
                 Ok(())
             })
         });
@@ -233,7 +198,6 @@ impl Sprinkler for DockerOOM {
         meters.insert(String::from("!"), Default::default()); // Other types of message flooding
         meters.insert(String::from("."), Default::default()); // Unidentified OOM
         let meters: Meters = Arc::new(RwLock::new(meters));
-
         let monitor = docker
             .events(&Default::default())
             .for_each({ let meters = meters.clone(); move |e| {
@@ -346,5 +310,24 @@ impl DockerOOM {
             .map_err(|_| {});
         // TODO report the kill to the master
         tokio::spawn(fut_kill);
+    }
+}
+
+struct Notification {
+
+}
+
+impl Future for Notification {
+    type Item = ();
+    type Error = ();
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        Ok(Async::Ready(()))
+    }
+}
+
+impl Notification {
+    pub fn send(&self) {
+        tokio::spawn(self);
     }
 }
