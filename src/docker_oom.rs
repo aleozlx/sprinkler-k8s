@@ -183,10 +183,10 @@ impl DockerOOM {
 
     fn handle_other_oom<'a>(meters: MeterSet, actor: &'a shiplift::rep::Actor) {
         let meters = meters.read().unwrap();
-        let (ref mut meter, ref mut divider) = meters["."].lock().unwrap();
-        meter.tick();
-        if meter.read() > 10.0 {
-            let transition = meter.state.escalate(20);
+        let mut meter = meters["."].lock().unwrap();
+        meter.0.tick();
+        if meter.0.read() > 10.0 {
+            let transition = meter.0.state.escalate(20);
             if transition == AnomalyTransition::Fixing {
                 // ? How to add delay between fixes
                 DockerOOM::fix_it(actor.id.clone());
@@ -194,14 +194,14 @@ impl DockerOOM {
             if transition.is_important() {
                 Notification {}.send();
             }
-            meter.state >>= transition;
+            meter.0.state >>= transition;
         }
         else {
-            let transition = meter.state.diminish();
+            let transition = meter.0.state.diminish();
             if transition.is_important() {
                 Notification {}.send();
             }
-            meter.state >>= transition;
+            meter.0.state >>= transition;
         }
     }
 
