@@ -1,6 +1,7 @@
 use std::io::Write;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::HashMap;
+use std::borrow::Cow;
 use tokio::prelude::*;
 use super::*;
 
@@ -332,7 +333,7 @@ impl DockerOOM {
         }
     }
 
-    fn fix_it<S: Into<Cow<'b, str>>>(id: S) {
+    fn fix_it<'a, S: Into<Cow<'a, str>>>(id: S) {
         let docker = shiplift::Docker::new();
         let container = shiplift::Container::new(&docker, id);
         let fut_kill = container.kill(None)  // Should send SIGKILL by default
