@@ -298,7 +298,7 @@ impl Sprinkler for DockerOOM {
                     }
                 }
                 else {
-                    DockerOOM::handle_other_panic(meters);
+                    DockerOOM::handle_other_panic(meters.clone());
                 }
                 Ok(())
             }})
