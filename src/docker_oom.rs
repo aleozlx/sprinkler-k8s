@@ -39,7 +39,7 @@ impl AnomalyTransition {
 }
 
 use std::ops::Shr;
-impl Shr<Anomaly> for Anomaly {
+impl Shr for Anomaly {
     type Output = Option<AnomalyTransition>;
     fn shr(self, rhs: Self) -> Option<AnomalyTransition> {
         match (self, rhs) {
