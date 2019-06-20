@@ -152,7 +152,7 @@ impl EventRateMeter {
     }
 }
 
-// TODO add a frequency divider
+struct FrequencyDivider;
 
 impl ImportantExt for AnomalyTransition {
     fn is_important(&self) -> bool {
@@ -239,67 +239,13 @@ impl Sprinkler for DockerOOM {
             .for_each({ let meters = meters.clone(); move |e| {
                 if e.typ == "container" && e.action == "oom" {
                     if let Some(pod_name) = e.actor.attributes.get("io.kubernetes.pod.name") {
-                        let need_new_meter = !meters.read().unwrap().contains_key(pod_name);
-                        if need_new_meter {
-                            let meter = EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() };
-                            meters.write().unwrap().insert(pod_name.clone(), Mutex::new(meter));
-                        }
-                        else {
-                            let meters = meters.read().unwrap();
-                            let mut meter = meters[pod_name].lock().unwrap();
-                            if meter.read() > 10.0 {
-                                let transition = meter.state.escalate(20);
-                                if transition == AnomalyTransition::Fixing {
-                                    // ? How to add delay between fixes
-                                    DockerOOM::fix_it(e.actor.id);
-                                }
-                                if transition.is_important() {
-                                    // TODO notify master
-                                }
-                                meter.state >>= transition;
-                            }
-                            else {
-                                let transition = meter.state.diminish();
-                                match transition {
-                                    AnomalyTransition::Disappeared => {
-                                        // TODO notify master
-                                    }
-                                    AnomalyTransition::Fixed => {
-                                        // TODO notify master
-                                    }
-                                    _ => {}
-                                }
-                                meter.state >>= transition;
-                            }
-                        }
+                        DockerOOM::handle_anticipated_oom(meters.clone(), &e.actor.attributes);
                     }
                     else { // The container is not managed by Kubernetes
-                        let meters = meters.read().unwrap();
-                        let mut meter = meters["."].lock().unwrap();
-                        meter.tick();
-                        if meter.read() > 10.0 {
-                            let transition = meter.state.escalate(20);
-                            if transition == AnomalyTransition::Fixing {
-                                // ? How to add delay between fixes
-                                DockerOOM::fix_it(e.actor.id);
-                            }
-                            if transition.is_important() {
-                                // TODO notify master
-                            }
-                            meter.state >>= transition;
-                        }
-                        else {
-                            let transition = meter.state.diminish();
-                            if transition.is_important() {
-                                // TODO notify master
-                            }
-                            meter.state >>= transition;
-                        }
+                        DockerOOM::handle_other_oom(meters.clone());
                     }
                 }
-                else {
-                    DockerOOM::handle_other_panic(meters.clone());
-                }
+                else { DockerOOM::handle_other_panic(meters.clone()); }
                 Ok(())
             }})
             .map_err(|e| error!("{}", e));
@@ -312,6 +258,66 @@ impl Sprinkler for DockerOOM {
 }
 
 impl DockerOOM {
+    fn handle_anticipated_oom(meters: Meters) {
+        let need_new_meter = !meters.read().unwrap().contains_key(pod_name);
+        if need_new_meter {
+            let meter = EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() };
+            meters.write().unwrap().insert(pod_name.clone(), Mutex::new(meter));
+        }
+        else {
+            let meters = meters.read().unwrap();
+            let mut meter = meters[pod_name].lock().unwrap();
+            if meter.read() > 10.0 {
+                let transition = meter.state.escalate(20);
+                if transition == AnomalyTransition::Fixing {
+                    // ? How to add delay between fixes
+                    DockerOOM::fix_it(e.actor.id);
+                }
+                if transition.is_important() {
+                    // TODO notify master
+                }
+                meter.state >>= transition;
+            }
+            else {
+                let transition = meter.state.diminish();
+                match transition {
+                    AnomalyTransition::Disappeared => {
+                        // TODO notify master
+                    }
+                    AnomalyTransition::Fixed => {
+                        // TODO notify master
+                    }
+                    _ => {}
+                }
+                meter.state >>= transition;
+            }
+        }
+    }
+
+    fn handle_other_oom<'a>(meters: Meters, attrs: &'a HashMap<String, String>) {
+        let meters = meters.read().unwrap();
+        let mut meter = meters["."].lock().unwrap();
+        meter.tick();
+        if meter.read() > 10.0 {
+            let transition = meter.state.escalate(20);
+            if transition == AnomalyTransition::Fixing {
+                // ? How to add delay between fixes
+                DockerOOM::fix_it(e.actor.id);
+            }
+            if transition.is_important() {
+                // TODO notify master
+            }
+            meter.state >>= transition;
+        }
+        else {
+            let transition = meter.state.diminish();
+            if transition.is_important() {
+                // TODO notify master
+            }
+            meter.state >>= transition;
+        }
+    }
+
     fn handle_other_panic(meters: Meters) {
         let meters = meters.read().unwrap();
         let mut meter = meters["."].lock().unwrap();
