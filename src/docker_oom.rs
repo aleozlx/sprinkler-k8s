@@ -156,14 +156,16 @@ impl DockerOOM {
             let mut meter = meters[pod_name].lock().unwrap();
             if meter.0.read() > 10.0 {
                 let transition = meter.0.state.escalate(20);
-                if transition == AnomalyTransition::Fixing {
-                    // ? How to add delay between fixes
-                    DockerOOM::fix_it(actor.id.clone());
+                meter.1.tick();
+                if meter.1.read() {
+                    if transition == AnomalyTransition::Fixing {
+                        DockerOOM::fix_it(actor.id.clone());
+                    }
+                    if transition.is_important() {
+                        Notification {}.send();
+                    }
+                    meter.0.state >>= transition;
                 }
-                if transition.is_important() {
-                    Notification {}.send();
-                }
-                meter.0.state >>= transition;
             }
             else {
                 let transition = meter.0.state.diminish();
