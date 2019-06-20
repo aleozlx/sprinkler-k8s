@@ -162,6 +162,8 @@ impl ImportantExt for AnomalyTransition {
     }
 }
 
+type Meters = Arc<RwLock<HashMap<String, Mutex<EventRateMeter>>>>;
+
 impl Sprinkler for DockerOOM {
     fn build(options: SprinklerOptions) -> Self {
         DockerOOM {
@@ -229,7 +231,7 @@ impl Sprinkler for DockerOOM {
         let mut meters = HashMap::new();
         meters.insert(String::from("!"), Default::default()); // Other types of message flooding
         meters.insert(String::from("."), Default::default()); // Unidentified OOM
-        let meters: Arc<RwLock<HashMap<String, Mutex<EventRateMeter>>>> = Arc::new(RwLock::new(meters));
+        let meters: Meters = Arc::new(RwLock::new(meters));
 
         let monitor = docker
             .events(&Default::default())
@@ -245,7 +247,15 @@ impl Sprinkler for DockerOOM {
                             let meters = meters.read().unwrap();
                             let mut meter = meters[pod_name].lock().unwrap();
                             if meter.read() > 10.0 {
-
+                                let transition = meter.state.escalate(20);
+                                if transition == AnomalyTransition::Fixing {
+                                    // ? How to add delay between fixes
+                                    DockerOOM::fix_it(e.actor.id);
+                                }
+                                if transition.is_important() {
+                                    // TODO notify master
+                                }
+                                meter.state >>= transition;
                             }
                             else {
                                 let transition = meter.state.diminish();
@@ -270,12 +280,7 @@ impl Sprinkler for DockerOOM {
                             let transition = meter.state.escalate(20);
                             if transition == AnomalyTransition::Fixing {
                                 // ? How to add delay between fixes
-                                let docker = shiplift::Docker::new();
-                                let container = shiplift::Container::new(&docker, e.actor.id);
-                                let fut_kill = container.kill(None)  // Should send SIGKILL by default
-                                    .map_err(|_| {});
-                                // TODO report the kill to the master
-                                tokio::spawn(fut_kill);
+                                DockerOOM::fix_it(e.actor.id);
                             }
                             if transition.is_important() {
                                 // TODO notify master
@@ -292,29 +297,42 @@ impl Sprinkler for DockerOOM {
                     }
                 }
                 else {
-                    let meters = meters.read().unwrap();
-                    let mut meter = meters["."].lock().unwrap();
-                    meter.tick();
-                    if meter.read() > 70.0 {
-                        if let Some(transition) = meter.state >> Anomaly::Positive {
-                            if transition.is_important() {
-                                // TODO notify master
-                            }
-                            meter.state = Anomaly::Positive;
-                        }
-                    }
-                    else {
-                        let transition = meter.state.diminish();
-                        if transition.is_important() {
-                            // TODO notify master
-                        }
-                        meter.state >>= transition;
-                    }
+                    DockerOOM::handle_other_panic(meters);
                 }
                 Ok(())
             }})
             .map_err(|e| error!("{}", e));
         tokio::run(monitor);
+    }
+
+    fn handle_other_panic(meters: Meters) {
+        let meters = meters.read().unwrap();
+        let mut meter = meters["."].lock().unwrap();
+        meter.tick();
+        if meter.read() > 70.0 {
+            if let Some(transition) = meter.state >> Anomaly::Positive {
+                if transition.is_important() {
+                    // TODO notify master
+                }
+                meter.state = Anomaly::Positive;
+            }
+        }
+        else {
+            let transition = meter.state.diminish();
+            if transition.is_important() {
+                // TODO notify master
+            }
+            meter.state >>= transition;
+        }
+    }
+
+    fn fix_it<S: Into<Cow<'b, str>>>(id: S) {
+        let docker = shiplift::Docker::new();
+        let container = shiplift::Container::new(&docker, id);
+        let fut_kill = container.kill(None)  // Should send SIGKILL by default
+            .map_err(|_| {});
+        // TODO report the kill to the master
+        tokio::spawn(fut_kill);
     }
 
     fn deactivate(&self) {
