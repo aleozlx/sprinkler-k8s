@@ -317,7 +317,7 @@ struct Notification {
 
 }
 
-impl Future for Notification {
+impl futures::future::Future for Notification {
     type Item = ();
     type Error = ();
 
