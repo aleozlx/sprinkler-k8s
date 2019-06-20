@@ -70,7 +70,7 @@ impl Default for EventRateMeter {
 
 impl EventRateMeter {
     fn tick(&mut self) {
-        self.count += 1
+        self.count += 1;
         if chrono::Local::now() - self.t0 > self.interval {
             last_rate = self.read();
             self.count = 0;
