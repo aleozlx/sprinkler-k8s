@@ -271,7 +271,7 @@ impl DockerOOM {
                 let transition = meter.state.escalate(20);
                 if transition == AnomalyTransition::Fixing {
                     // ? How to add delay between fixes
-                    DockerOOM::fix_it(actor.id.into());
+                    DockerOOM::fix_it(actor.id.borrow());
                 }
                 if transition.is_important() {
                     // TODO notify master
@@ -302,7 +302,7 @@ impl DockerOOM {
             let transition = meter.state.escalate(20);
             if transition == AnomalyTransition::Fixing {
                 // ? How to add delay between fixes
-                DockerOOM::fix_it(actor.id.into());
+                DockerOOM::fix_it(actor.id.borrow());
             }
             if transition.is_important() {
                 // TODO notify master
