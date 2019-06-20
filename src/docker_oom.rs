@@ -153,9 +153,9 @@ impl DockerOOM {
         }
         else {
             let meters = meters.read().unwrap();
-            let (ref mut meter, ref mut divider) = meters[pod_name].lock().unwrap();
-            if meter.read() > 10.0 {
-                let transition = meter.state.escalate(20);
+            let mut meter = meters[pod_name].lock().unwrap();
+            if meter.0.read() > 10.0 {
+                let transition = meter.0.state.escalate(20);
                 if transition == AnomalyTransition::Fixing {
                     // ? How to add delay between fixes
                     DockerOOM::fix_it(actor.id.clone());
@@ -163,10 +163,10 @@ impl DockerOOM {
                 if transition.is_important() {
                     Notification {}.send();
                 }
-                meter.state >>= transition;
+                meter.0.state >>= transition;
             }
             else {
-                let transition = meter.state.diminish();
+                let transition = meter.0.state.diminish();
                 match transition {
                     AnomalyTransition::Disappeared => {
                         Notification {}.send();
@@ -176,7 +176,7 @@ impl DockerOOM {
                     }
                     _ => {}
                 }
-                meter.state >>= transition;
+                meter.0.state >>= transition;
             }
         }
     }
