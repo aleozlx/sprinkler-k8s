@@ -9,6 +9,90 @@ pub struct DockerOOM {
     _deactivate: Arc<Mutex<bool>>
 }
 
+#[derive(PartialEq, Debug, Copy, Clone)]
+enum Anomaly {
+    Negative,       // No anomaly has been detected
+    Positive,       // Anomaly has occurred
+    Fixing(usize),  // Has attempted to intervene N times
+    OutOfControl    // Has given up trying because the programmed strategy will not work
+}
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+enum AnomalyTransition {
+    Normal,         // Negative -> Negative
+    Occurred,       // Negative -> Positive
+    Unhandled,      // Positive -> Positive
+    Disappeared,    // Positive | OutOfControl -> Negative
+    Fixed,          // Fixing(_) -> Negative
+    Fixing,         // Positive -> Fixing(1) || Fixing(n) -> Fixing(n+1)
+    GaveUp,         // Fixing(m) -> OutOfControl
+    HasGivenUp      // OutOfControl -> OutOfControl
+}
+
+use std::ops::Shr;
+impl Shr<Scalar> for Anomaly {
+    type Output = AnomalyTransition;
+    fn shr(self, rhs: Self) -> Option<Output> {
+        match (self, rhs) {
+            (Anomaly::Negative, Anomaly::Negative) => Some(AnomalyTransition::Normal),
+            (Anomaly::Negative, Anomaly::Positive) => Some(AnomalyTransition::Occurred), // log
+            (Anomaly::Positive, Anomaly::Positive) => Some(AnomalyTransition::Unhandled),
+            (Anomaly::Positive, Anomaly::Negative) => Some(AnomalyTransition::Disappeared), // log
+            (Anomaly::Positive, Anomaly::Fixing(1)) => Some(AnomalyTransition::Fixing),
+            (Anomaly::Fixing(i), Anomaly::Fixing(j)) if i+1==j => Some(AnomalyTransition::Fixing),
+            (Anomaly::Fixing(_), Anomaly::Negative) => Some(AnomalyTransition::Fixed), // log
+            (Anomaly::Fixing(_), Anomaly::OutOfControl) => Some(AnomalyTransition::GaveUp), // log
+            (Anomaly::OutOfControl, Anomaly::Negative) => Some(AnomalyTransition::Disappeared), // log
+            (Anomaly::OutOfControl, Anomaly::OutOfControl) => Some(AnomalyTransition::HasGivenUp),
+        }
+    }
+}
+
+struct EventRateMeter {
+    count: usize,                        // Event counter
+    t0: chrono::DateTime<chrono::Local>, // Starting point of this period
+    last_rate: f32,                      // Last reading
+    interval: chrono::Duration,          // Measurement interval
+    _state: Anomaly                       // aka Is this (ab)normal?
+}
+
+impl Default for EventRateMeter {
+    fn default() -> Self {
+        EventRateMeter {
+            count: 0,
+            t0: chrono::Local::now(),
+            last_rate: 0f32,
+            interval: chrono::Duration::seconds(1),
+            rating: EventRateAnomaly::Negative
+        }
+    }
+}
+
+impl EventRateMeter {
+    fn tick(&mut self) {
+        self.count += 1
+        if chrono::Local::now() - self.t0 > self.interval {
+            last_rate = self.read();
+            self.count = 0;
+        }
+    }
+
+    fn dt(&self) {
+        ((self.interval.num_seconds() + self.interval.nanos_mod_sec()) as f32) / 1e9
+    }
+
+    fn read(&self) -> f32 {
+        if self.count == 0 { self.last_rate }
+        else { (self.count as f32) / self.dt() }
+    }
+
+    fn state(&self) -> {
+        self._state
+    }
+
+    fn state_override()
+}
+
 impl Sprinkler for DockerOOM {
     fn build(options: SprinklerOptions) -> Self {
         DockerOOM {
@@ -75,23 +159,30 @@ impl Sprinkler for DockerOOM {
         let docker = shiplift::Docker::new();
         // let ref now = chrono::Local::now().timestamp() as u64;
         // let ref event_opts = shiplift::EventsOptions::builder().since(now).build();
+
+        let meter: Arc<Mutex<EventRateMeter>> = Arc::new(Mutex::new(Default::default()));
+
         let monitor = docker
             .events(&Default::default())
-            .for_each(|e| {
+            .for_each({ let meter = meter.clone(); move |e| {
+                let meter = meter.lock();
                 if e.typ == "container" && e.action == "oom" {
                     if let Some(pod_name) = e.actor.attributes.get("io.kubernetes.pod.name") {
 
                     }
                     else { // The container is not managed by Kubernetes
+                        // TODO check rate meter state
                         let docker = shiplift::Docker::new();
                         let container = shiplift::Container::new(&docker, e.actor.id);
                         let fut_kill = container.kill(None)  // Should send SIGKILL by default
                             .map_err(|_| {});
                         tokio::spawn(fut_kill);
+
+                        // TODO report the kill to the master
                     }
                 }
                 Ok(())
-            })
+            }})
             .map_err(|e| error!("{}", e));
         tokio::run(monitor);
     }
