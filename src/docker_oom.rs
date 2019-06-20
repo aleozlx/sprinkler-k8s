@@ -56,7 +56,26 @@ impl EventRateMeter {
     }
 }
 
-struct FrequencyDivider;
+#[derive(Default)]
+struct FrequencyDivider {
+    count: usize,             // Event counter
+    interval: usize,          // Reset interval
+}
+
+impl FrequencyDivider {
+    /// Trigger the meter counter
+    pub fn tick(&mut self) {
+        self.count += 1;
+        if self.count == self.interval {
+            self.count = 0;
+        }
+    }
+
+    /// Output event
+    pub fn read(&self) -> bool {
+        self.count == 0
+    }
+}
 
 impl ImportantExt for AnomalyTransition {
     fn is_important(&self) -> bool {
@@ -67,7 +86,7 @@ impl ImportantExt for AnomalyTransition {
     }
 }
 
-type Meters = Arc<RwLock<HashMap<String, Mutex<EventRateMeter>>>>;
+type MeterSet = Arc<RwLock<HashMap<String, Mutex<(EventRateMeter, FrequencyDivider)>>>>;
 
 impl Sprinkler for DockerOOM {
     fn build(options: SprinklerOptions) -> Self {
@@ -101,7 +120,7 @@ impl Sprinkler for DockerOOM {
         let mut meters = HashMap::new();
         meters.insert(String::from("!"), Default::default()); // Other types of message flooding
         meters.insert(String::from("."), Default::default()); // Unidentified OOM
-        let meters: Meters = Arc::new(RwLock::new(meters));
+        let meters: MeterSet = Arc::new(RwLock::new(meters));
         let monitor = docker
             .events(&Default::default())
             .for_each({ let meters = meters.clone(); move |e| {
@@ -126,10 +145,10 @@ impl Sprinkler for DockerOOM {
 }
 
 impl DockerOOM {
-    fn handle_anticipated_oom<'a>(meters: Meters, pod_name: &'a str, actor: &'a shiplift::rep::Actor) {
+    fn handle_anticipated_oom<'a>(meters: MeterSet, pod_name: &'a str, actor: &'a shiplift::rep::Actor) {
         let need_new_meter = !meters.read().unwrap().contains_key(pod_name);
         if need_new_meter {
-            let meter = EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() };
+            let meter = (EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() }, Default::default());
             meters.write().unwrap().insert(String::from(pod_name), Mutex::new(meter));
         }
         else {
@@ -162,7 +181,7 @@ impl DockerOOM {
         }
     }
 
-    fn handle_other_oom<'a>(meters: Meters, actor: &'a shiplift::rep::Actor) {
+    fn handle_other_oom<'a>(meters: MeterSet, actor: &'a shiplift::rep::Actor) {
         let meters = meters.read().unwrap();
         let mut meter = meters["."].lock().unwrap();
         meter.tick();
@@ -186,7 +205,7 @@ impl DockerOOM {
         }
     }
 
-    fn handle_other_panic(meters: Meters) {
+    fn handle_other_panic(meters: MeterSet) {
         let meters = meters.read().unwrap();
         let mut meter = meters["."].lock().unwrap();
         meter.tick();
