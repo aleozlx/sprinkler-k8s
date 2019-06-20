@@ -63,7 +63,7 @@ impl Default for EventRateMeter {
             t0: chrono::Local::now(),
             last_rate: 0f32,
             interval: chrono::Duration::seconds(1),
-            rating: Anomaly::Negative
+            _state: Anomaly::Negative
         }
     }
 }
@@ -77,7 +77,7 @@ impl EventRateMeter {
         }
     }
 
-    fn dt(&self) {
+    fn dt(&self) -> f32 {
         ((self.interval.num_seconds() + self.interval.nanos_mod_sec()) as f32) / 1e9
     }
 
