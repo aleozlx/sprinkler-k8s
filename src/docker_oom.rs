@@ -262,7 +262,7 @@ impl DockerOOM {
         let need_new_meter = !meters.read().unwrap().contains_key(pod_name);
         if need_new_meter {
             let meter = EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() };
-            meters.write().unwrap().insert(pod_name.clone(), Mutex::new(meter));
+            meters.write().unwrap().insert(String::from(pod_name), Mutex::new(meter));
         }
         else {
             let meters = meters.read().unwrap();
