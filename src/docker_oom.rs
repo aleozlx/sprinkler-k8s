@@ -238,7 +238,7 @@ impl DockerOOM {
                     DockerOOM::fix_it(actor.id.clone());
                 }
                 if transition.is_important() {
-                    // TODO notify master
+                    Notification {}.send();
                 }
                 meter.state >>= transition;
             }
@@ -246,10 +246,10 @@ impl DockerOOM {
                 let transition = meter.state.diminish();
                 match transition {
                     AnomalyTransition::Disappeared => {
-                        // TODO notify master
+                        Notification {}.send();
                     }
                     AnomalyTransition::Fixed => {
-                        // TODO notify master
+                        Notification {}.send();
                     }
                     _ => {}
                 }
@@ -269,14 +269,14 @@ impl DockerOOM {
                 DockerOOM::fix_it(actor.id.clone());
             }
             if transition.is_important() {
-                // TODO notify master
+                Notification {}.send();
             }
             meter.state >>= transition;
         }
         else {
             let transition = meter.state.diminish();
             if transition.is_important() {
-                // TODO notify master
+                Notification {}.send();
             }
             meter.state >>= transition;
         }
@@ -289,7 +289,7 @@ impl DockerOOM {
         if meter.read() > 70.0 {
             if let Some(transition) = meter.state >> Anomaly::Positive {
                 if transition.is_important() {
-                    // TODO notify master
+                    Notification {}.send();
                 }
                 meter.state = Anomaly::Positive;
             }
@@ -297,7 +297,7 @@ impl DockerOOM {
         else {
             let transition = meter.state.diminish();
             if transition.is_important() {
-                // TODO notify master
+                Notification {}.send();
             }
             meter.state >>= transition;
         }
