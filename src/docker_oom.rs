@@ -305,6 +305,12 @@ impl Sprinkler for DockerOOM {
         tokio::run(monitor);
     }
 
+    fn deactivate(&self) {
+        *self._deactivate.lock().unwrap() = true;
+    }
+}
+
+impl DockerOOM {
     fn handle_other_panic(meters: Meters) {
         let meters = meters.read().unwrap();
         let mut meter = meters["."].lock().unwrap();
@@ -333,9 +339,5 @@ impl Sprinkler for DockerOOM {
             .map_err(|_| {});
         // TODO report the kill to the master
         tokio::spawn(fut_kill);
-    }
-
-    fn deactivate(&self) {
-        *self._deactivate.lock().unwrap() = true;
     }
 }
