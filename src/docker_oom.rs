@@ -153,7 +153,7 @@ impl DockerOOM {
         }
         else {
             let meters = meters.read().unwrap();
-            let (mut meter, mut divider) = *meters[pod_name].lock().unwrap();
+            let (ref mut meter, ref mut divider) = meters[pod_name].lock().unwrap();
             if meter.read() > 10.0 {
                 let transition = meter.state.escalate(20);
                 if transition == AnomalyTransition::Fixing {
@@ -183,7 +183,7 @@ impl DockerOOM {
 
     fn handle_other_oom<'a>(meters: MeterSet, actor: &'a shiplift::rep::Actor) {
         let meters = meters.read().unwrap();
-        let (mut meter, mut divider) = *meters["."].lock().unwrap();
+        let (ref mut meter, ref mut divider) = meters["."].lock().unwrap();
         meter.tick();
         if meter.read() > 10.0 {
             let transition = meter.state.escalate(20);
@@ -207,7 +207,7 @@ impl DockerOOM {
 
     fn handle_other_panic(meters: MeterSet) {
         let meters = meters.read().unwrap();
-        let (mut meter, _) = *meters["."].lock().unwrap();
+        let (ref mut meter, _) = meters["."].lock().unwrap();
         meter.tick();
         if meter.read() > 70.0 {
             if let Some(transition) = meter.state >> Anomaly::Positive {
