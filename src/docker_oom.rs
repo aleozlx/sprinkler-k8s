@@ -207,22 +207,22 @@ impl DockerOOM {
 
     fn handle_other_panic(meters: MeterSet) {
         let meters = meters.read().unwrap();
-        let (ref mut meter, _) = meters["."].lock().unwrap();
-        meter.tick();
-        if meter.read() > 70.0 {
-            if let Some(transition) = meter.state >> Anomaly::Positive {
+        let mut meter = meters["."].lock().unwrap();
+        meter.0.tick();
+        if meter.0.read() > 70.0 {
+            if let Some(transition) = meter.0.state >> Anomaly::Positive {
                 if transition.is_important() {
                     Notification {}.send();
                 }
-                meter.state = Anomaly::Positive;
+                meter.0.state = Anomaly::Positive;
             }
         }
         else {
-            let transition = meter.state.diminish();
+            let transition = meter.0.state.diminish();
             if transition.is_important() {
                 Notification {}.send();
             }
-            meter.state >>= transition;
+            meter.0.state >>= transition;
         }
     }
 
