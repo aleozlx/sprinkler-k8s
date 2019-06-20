@@ -72,13 +72,13 @@ impl EventRateMeter {
     fn tick(&mut self) {
         self.count += 1;
         if chrono::Local::now() - self.t0 > self.interval {
-            last_rate = self.read();
+            self.last_rate = self.read();
             self.count = 0;
         }
     }
 
     fn dt(&self) -> f32 {
-        ((self.interval.num_seconds() + self.interval.nanos_mod_sec()) as f32) / 1e9
+        (self.interval.num_milliseconds() as f32) / 1e3
     }
 
     fn read(&self) -> f32 {
