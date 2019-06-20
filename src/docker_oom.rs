@@ -317,7 +317,7 @@ struct Notification {
 
 }
 
-impl futures::future::Future for Notification {
+impl Future for Notification {
     type Item = ();
     type Error = ();
 
@@ -327,7 +327,7 @@ impl futures::future::Future for Notification {
 }
 
 impl Notification {
-    pub fn send(&self) {
+    pub fn send(self) {
         tokio::spawn(self);
     }
 }
