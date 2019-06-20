@@ -119,10 +119,13 @@ impl Sprinkler for DockerOOM {
         let docker = shiplift::Docker::new();
         let mut meters = HashMap::new();
         meters.insert(String::from("!"), Default::default()); // Other types of message flooding
-        meters.insert(String::from("."), Default::default()); // Unidentified OOM
+        meters.insert(String::from("."), (
+            Default::default(), // Unidentified OOM
+            FrequencyDivider { interval: 15, ..Default::default() }
+        ));
         let meters: MeterSet = Arc::new(RwLock::new(meters));
         let monitor = docker
-            .events(&Default::default())
+            .events(&Default::default()) // Stream and filter all docker events
             .for_each({ let meters = meters.clone(); move |e| {
                 if e.typ == "container" && e.action == "oom" {
                     if let Some(pod_name) = e.actor.attributes.get("io.kubernetes.pod.name") {
@@ -148,16 +151,20 @@ impl DockerOOM {
     fn handle_anticipated_oom<'a>(meters: MeterSet, pod_name: &'a str, actor: &'a shiplift::rep::Actor) {
         let need_new_meter = !meters.read().unwrap().contains_key(pod_name);
         if need_new_meter {
-            let meter = (EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() }, Default::default());
+            let meter = (
+                EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() }, // Jump to fixing(1) state
+                FrequencyDivider { interval: 15, ..Default::default() } // Divide event frequency by 15
+            );
             meters.write().unwrap().insert(String::from(pod_name), Mutex::new(meter));
         }
         else {
             let meters = meters.read().unwrap();
             let mut meter = meters[pod_name].lock().unwrap();
-            if meter.0.read() > 10.0 {
-                let transition = meter.0.state.escalate(20);
+            meter.0.tick();
+            if meter.0.read() > 10.0 { // Event rate > 10 Hz
+                let transition = meter.0.state.escalate(20); // 20 retries till declaring out-of-control
                 meter.1.tick();
-                if meter.1.read() {
+                if meter.1.read() { // Hit handling schedule
                     if transition == AnomalyTransition::Fixing {
                         DockerOOM::fix_it(actor.id.clone());
                     }
@@ -189,14 +196,16 @@ impl DockerOOM {
         meter.0.tick();
         if meter.0.read() > 10.0 {
             let transition = meter.0.state.escalate(20);
-            if transition == AnomalyTransition::Fixing {
-                // ? How to add delay between fixes
-                DockerOOM::fix_it(actor.id.clone());
+            meter.1.tick();
+            if meter.1.read() {
+                if transition == AnomalyTransition::Fixing {
+                    DockerOOM::fix_it(actor.id.clone());
+                }
+                if transition.is_important() {
+                    Notification {}.send();
+                }
+                meter.0.state >>= transition;
             }
-            if transition.is_important() {
-                Notification {}.send();
-            }
-            meter.0.state >>= transition;
         }
         else {
             let transition = meter.0.state.diminish();
