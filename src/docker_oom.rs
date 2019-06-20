@@ -83,6 +83,7 @@ impl Sprinkler for DockerOOM {
 
                     }
                     else { // The container is not managed by Kubernetes
+                        let docker = shiplift::Docker::new();
                         let container = shiplift::Container::new(&docker, e.actor.id);
                         let fut_kill = container.kill(None)  // Should send SIGKILL by default
                             .map_err(|_| {});
