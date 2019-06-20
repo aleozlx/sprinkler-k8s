@@ -31,8 +31,8 @@ enum AnomalyTransition {
 
 use std::ops::Shr;
 impl Shr<Anomaly> for Anomaly {
-    type Output = AnomalyTransition;
-    fn shr(self, rhs: Self) -> Option<Output> {
+    type Output = Option<AnomalyTransition>;
+    fn shr(self, rhs: Self) -> Option<AnomalyTransition> {
         match (self, rhs) {
             (Anomaly::Negative, Anomaly::Negative) => Some(AnomalyTransition::Normal),
             (Anomaly::Negative, Anomaly::Positive) => Some(AnomalyTransition::Occurred), // log
@@ -44,6 +44,7 @@ impl Shr<Anomaly> for Anomaly {
             (Anomaly::Fixing(_), Anomaly::OutOfControl) => Some(AnomalyTransition::GaveUp), // log
             (Anomaly::OutOfControl, Anomaly::Negative) => Some(AnomalyTransition::Disappeared), // log
             (Anomaly::OutOfControl, Anomaly::OutOfControl) => Some(AnomalyTransition::HasGivenUp),
+            _ => None
         }
     }
 }
