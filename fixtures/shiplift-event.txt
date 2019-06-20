@@ -1,0 +1,30 @@
+Event {
+    typ: "container",
+    action: "oom", 
+    actor: Actor { 
+        id: "77b7c97424b4774d03a015beb8cdb256f3a33bc885abe9b8efd5a79ff998c65f", 
+        attributes: {
+            "io.kubernetes.container.name": "notebook",
+            "io.kubernetes.sandbox.id": "61ea6d58298e97dd2bc412084455519f992f1d02a9402acd73c1bca0a2c485a1",
+            "annotation.io.kubernetes.container.hash": "603021a5",
+            "io.kubernetes.docker.type": "container",
+            "annotation.io.kubernetes.container.terminationMessagePath": "/dev/termination-log",
+            "maintainer": "MUDSA",
+            "image": "sha256:53d2e4e10e73f7744320bbb47a277eaa3ea421fcb9e52b874abf3853b12a3eb0",
+            "io.kubernetes.container.logpath": "/var/log/pods/41627734-92dc-11e9-9c99-001a4a16016f/notebook/0.log",
+            "name": "k8s_notebook_jupyter-SSOHERE_jhub-prod_41627734-92dc-11e9-9c99-001a4a16016f_0",
+            "io.kubernetes.pod.name": "jupyter-SSOHERE",
+            "io.kubernetes.pod.namespace": "jhub-prod",
+            "annotation.io.kubernetes.container.ports": "[{\"name\":\"notebook-port\",\"containerPort\":8888,\"protocol\":\"TCP\"}]",
+            "annotation.io.kubernetes.container.terminationMessagePolicy": "File",
+            "annotation.io.kubernetes.pod.terminationGracePeriod": "30",
+            "io.kubernetes.pod.uid": "41627734-92dc-11e9-9c99-001a4a16016f",
+            "annotation.io.kubernetes.container.restartCount": "0"
+        }
+    },
+    status: Some("oom"),
+    id: Some("77b7c97424b4774d03a015beb8cdb256f3a33bc885abe9b8efd5a79ff998c65f"),
+    from: Some("sha256:53d2e4e10e73f7744320bbb47a277eaa3ea421fcb9e52b874abf3853b12a3eb0"),
+    time: 1560982233,
+    time_nano: 1560982233894430558 
+}
