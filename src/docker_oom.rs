@@ -271,7 +271,7 @@ impl DockerOOM {
                 let transition = meter.state.escalate(20);
                 if transition == AnomalyTransition::Fixing {
                     // ? How to add delay between fixes
-                    DockerOOM::fix_it(actor.id);
+                    DockerOOM::fix_it(actor.id.into());
                 }
                 if transition.is_important() {
                     // TODO notify master
@@ -302,7 +302,7 @@ impl DockerOOM {
             let transition = meter.state.escalate(20);
             if transition == AnomalyTransition::Fixing {
                 // ? How to add delay between fixes
-                DockerOOM::fix_it(actor.id);
+                DockerOOM::fix_it(actor.id.into());
             }
             if transition.is_important() {
                 // TODO notify master
@@ -339,7 +339,7 @@ impl DockerOOM {
         }
     }
 
-    fn fix_it<'a, S: Into<Cow<'a, str>>>(id: S) {
+    fn fix_it<'a>(id: &'a str) {
         let docker = shiplift::Docker::new();
         let container = shiplift::Container::new(&docker, id);
         let fut_kill = container.kill(None)  // Should send SIGKILL by default
