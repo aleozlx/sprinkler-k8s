@@ -79,7 +79,15 @@ impl Sprinkler for DockerOOM {
             .events(&Default::default())
             .for_each(|e| {
                 if e.typ == "container" && e.action == "oom" {
-                    println!("event -> {:?}", e.actor.attributes["io.kubernetes.pod.name"]);
+                    if let Some(pod_name) = e.actor.attributes.get("io.kubernetes.pod.name") {
+
+                    }
+                    else { // The container is not managed by Kubernetes
+                        let container = shiplift::Container::new(&docker, e.actor.id);
+                        let fut_kill = container.kill(None)  // Should send SIGKILL by default
+                            .map_err(|_| {});
+                        tokio::spawn(fut_kill);
+                    }
                 }
                 Ok(())
             })
