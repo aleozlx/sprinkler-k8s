@@ -77,7 +77,7 @@ impl Shr<AnomalyTransition> for Anomaly {
 
 impl ShrAssign<AnomalyTransition> for Anomaly {
     fn shr_assign(&mut self, rhs: AnomalyTransition) {
-        let next = self >> rhs;
+        let next = *self >> rhs;
         *self = next;
     }
 }
