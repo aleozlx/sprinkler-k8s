@@ -1,5 +1,6 @@
 use std::io::Write;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::HashMap;
 use tokio::prelude::*;
 use super::*;
 
@@ -10,15 +11,42 @@ pub struct DockerOOM {
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
-enum Anomaly {
+pub enum Anomaly {
     Negative,       // No anomaly has been detected
     Positive,       // Anomaly has occurred
     Fixing(usize),  // Has attempted to intervene N times
     OutOfControl    // Has given up trying because the programmed strategy will not work
 }
 
+impl Anomaly {
+    pub fn get_retry_unchecked(&self) -> usize {
+        match self {
+            Anomaly::Negative | Anomaly::Positive => 0,
+            Anomaly::Fixing(n) => *n,
+            Anomaly::OutOfControl => std::usize::MAX
+        }
+    }
+
+    pub fn escalate(&self, max_retry: usize) -> AnomalyTransition {
+        match self {
+            Anomaly::Negative => (*self >> Anomaly::Positive).unwrap(),
+            Anomaly::Positive => (*self >> Anomaly::Fixing(1)).unwrap(),
+            Anomaly::Fixing(n) => if *n < max_retry {
+                AnomalyTransition::Fixing
+            } else {
+                (*self >> Anomaly::OutOfControl).unwrap()
+            },
+            Anomaly::OutOfControl => (*self >> Anomaly::OutOfControl).unwrap(),
+        }
+    }
+
+    pub fn diminish(&self) -> AnomalyTransition {
+        (*self >> Anomaly::Negative).unwrap()
+    }
+}
+
 #[derive(PartialEq, Debug, Copy, Clone)]
-enum AnomalyTransition {
+pub enum AnomalyTransition {
     Normal,         // Negative -> Negative
     Occurred,       // Negative -> Positive
     Unhandled,      // Positive -> Positive
@@ -29,13 +57,13 @@ enum AnomalyTransition {
     HasGivenUp      // OutOfControl -> OutOfControl
 }
 
-impl AnomalyTransition {
-    pub fn is_important(&self) -> bool {
-        match self {
-            AnomalyTransition::Occurred | AnomalyTransition::Disappeared | AnomalyTransition::Fixed | AnomalyTransition::GaveUp => true,
-            _ => false
-        }
-    }
+pub trait ImportantExt {
+    fn is_important(&self) -> bool;
+}
+
+pub trait EscalateExt {
+    fn max_retry() -> usize;
+    fn escalate(&mut self) -> AnomalyTransition;
 }
 
 use std::ops::Shr;
@@ -82,12 +110,12 @@ impl ShrAssign<AnomalyTransition> for Anomaly {
     }
 }
 
-struct EventRateMeter {
+pub struct EventRateMeter {
     count: usize,                        // Event counter
     t0: chrono::DateTime<chrono::Local>, // Starting point of this period
     last_rate: f32,                      // Last reading
     interval: chrono::Duration,          // Measurement interval
-    _state: Anomaly                       // aka Is this (ab)normal?
+    pub state: Anomaly                   // aka Is this (ab)normal?
 }
 
 impl Default for EventRateMeter {
@@ -97,12 +125,13 @@ impl Default for EventRateMeter {
             t0: chrono::Local::now(),
             last_rate: 0f32,
             interval: chrono::Duration::seconds(1),
-            _state: Anomaly::Negative
+            state: Anomaly::Negative
         }
     }
 }
 
 impl EventRateMeter {
+    /// Trigger the meter counter
     pub fn tick(&mut self) {
         self.count += 1;
         if chrono::Local::now() - self.t0 > self.interval {
@@ -115,13 +144,21 @@ impl EventRateMeter {
         (self.interval.num_milliseconds() as f32) / 1e3
     }
 
+    /// Compute event frequency (Hz)
     pub fn read(&self) -> f32 {
-        if self.count == 0 { self.last_rate }
+        if self.count < 6 { self.last_rate }
         else { (self.count as f32) / self.dt() }
     }
+}
 
-    pub fn state(&self) -> Anomaly {
-        self._state
+// TODO add a frequency divider
+
+impl ImportantExt for AnomalyTransition {
+    fn is_important(&self) -> bool {
+        match self {
+            AnomalyTransition::Occurred | AnomalyTransition::Disappeared | AnomalyTransition::Fixed | AnomalyTransition::GaveUp => true,
+            _ => false
+        }
     }
 }
 
@@ -189,28 +226,89 @@ impl Sprinkler for DockerOOM {
 
     fn activate_agent(&self) {
         let docker = shiplift::Docker::new();
-        // let ref now = chrono::Local::now().timestamp() as u64;
-        // let ref event_opts = shiplift::EventsOptions::builder().since(now).build();
-
-        let meter: Arc<Mutex<EventRateMeter>> = Arc::new(Mutex::new(Default::default()));
+        let mut meters = HashMap::new();
+        meters.insert(String::from("!"), Default::default()); // Other types of message flooding
+        meters.insert(String::from("."), Default::default()); // Unidentified OOM
+        let meters: Arc<RwLock<HashMap<String, Mutex<EventRateMeter>>>> = Arc::new(RwLock::new(meters));
 
         let monitor = docker
             .events(&Default::default())
-            .for_each({ let meter = meter.clone(); move |e| {
-                let meter = meter.lock();
+            .for_each({ let meters = meters.clone(); move |e| {
                 if e.typ == "container" && e.action == "oom" {
                     if let Some(pod_name) = e.actor.attributes.get("io.kubernetes.pod.name") {
+                        let need_new_meter = !meters.read().unwrap().contains_key(pod_name);
+                        if need_new_meter {
+                            let meter = EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() };
+                            meters.write().unwrap().insert(pod_name.clone(), Mutex::new(meter));
+                        }
+                        else {
+                            let meters = meters.read().unwrap();
+                            let mut meter = meters[pod_name].lock().unwrap();
+                            if meter.read() > 10.0 {
 
+                            }
+                            else {
+                                let transition = meter.state.diminish();
+                                match transition {
+                                    AnomalyTransition::Disappeared => {
+                                        // TODO notify master
+                                    }
+                                    AnomalyTransition::Fixed => {
+                                        // TODO notify master
+                                    }
+                                    _ => {}
+                                }
+                                meter.state >>= transition;
+                            }
+                        }
                     }
                     else { // The container is not managed by Kubernetes
-                        // TODO check rate meter state
-                        let docker = shiplift::Docker::new();
-                        let container = shiplift::Container::new(&docker, e.actor.id);
-                        let fut_kill = container.kill(None)  // Should send SIGKILL by default
-                            .map_err(|_| {});
-                        tokio::spawn(fut_kill);
-
-                        // TODO report the kill to the master
+                        let meters = meters.read().unwrap();
+                        let mut meter = meters["."].lock().unwrap();
+                        meter.tick();
+                        if meter.read() > 10.0 {
+                            let transition = meter.state.escalate(20);
+                            if transition == AnomalyTransition::Fixing {
+                                // ? How to add delay between fixes
+                                let docker = shiplift::Docker::new();
+                                let container = shiplift::Container::new(&docker, e.actor.id);
+                                let fut_kill = container.kill(None)  // Should send SIGKILL by default
+                                    .map_err(|_| {});
+                                // TODO report the kill to the master
+                                tokio::spawn(fut_kill);
+                            }
+                            if transition.is_important() {
+                                // TODO notify master
+                            }
+                            meter.state >>= transition;
+                        }
+                        else {
+                            let transition = meter.state.diminish();
+                            if transition.is_important() {
+                                // TODO notify master
+                            }
+                            meter.state >>= transition;
+                        }
+                    }
+                }
+                else {
+                    let meters = meters.read().unwrap();
+                    let mut meter = meters["."].lock().unwrap();
+                    meter.tick();
+                    if meter.read() > 70.0 {
+                        if let Some(transition) = meter.state >> Anomaly::Positive {
+                            if transition.is_important() {
+                                // TODO notify master
+                            }
+                            meter.state = Anomaly::Positive;
+                        }
+                    }
+                    else {
+                        let transition = meter.state.diminish();
+                        if transition.is_important() {
+                            // TODO notify master
+                        }
+                        meter.state >>= transition;
                     }
                 }
                 Ok(())
