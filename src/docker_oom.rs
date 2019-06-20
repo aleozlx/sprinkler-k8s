@@ -153,7 +153,7 @@ impl DockerOOM {
         }
         else {
             let meters = meters.read().unwrap();
-            let mut meter = meters[pod_name].lock().unwrap();
+            let (mut meter, mut divider) = meters[pod_name].lock().unwrap();
             if meter.read() > 10.0 {
                 let transition = meter.state.escalate(20);
                 if transition == AnomalyTransition::Fixing {
