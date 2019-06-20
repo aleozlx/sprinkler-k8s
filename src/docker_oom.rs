@@ -86,7 +86,7 @@ impl EventRateMeter {
         else { (self.count as f32) / self.dt() }
     }
 
-    fn state(&self) -> {
+    fn state(&self) -> Anomaly {
         self._state
     }
 
