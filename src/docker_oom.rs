@@ -239,10 +239,10 @@ impl Sprinkler for DockerOOM {
             .for_each({ let meters = meters.clone(); move |e| {
                 if e.typ == "container" && e.action == "oom" {
                     if let Some(pod_name) = e.actor.attributes.get("io.kubernetes.pod.name") {
-                        DockerOOM::handle_anticipated_oom(meters.clone(), &e.actor.attributes);
+                        DockerOOM::handle_anticipated_oom(meters.clone(), pod_name, &e.actor);
                     }
                     else { // The container is not managed by Kubernetes
-                        DockerOOM::handle_other_oom(meters.clone());
+                        DockerOOM::handle_other_oom(meters.clone(), &e.actor);
                     }
                 }
                 else { DockerOOM::handle_other_panic(meters.clone()); }
@@ -258,7 +258,7 @@ impl Sprinkler for DockerOOM {
 }
 
 impl DockerOOM {
-    fn handle_anticipated_oom(meters: Meters) {
+    fn handle_anticipated_oom<'a>(meters: Meters, pod_name: &'a str, actor: &'a shiplift::rep::Actor) {
         let need_new_meter = !meters.read().unwrap().contains_key(pod_name);
         if need_new_meter {
             let meter = EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() };
@@ -271,7 +271,7 @@ impl DockerOOM {
                 let transition = meter.state.escalate(20);
                 if transition == AnomalyTransition::Fixing {
                     // ? How to add delay between fixes
-                    DockerOOM::fix_it(e.actor.id);
+                    DockerOOM::fix_it(actor.id);
                 }
                 if transition.is_important() {
                     // TODO notify master
@@ -294,7 +294,7 @@ impl DockerOOM {
         }
     }
 
-    fn handle_other_oom<'a>(meters: Meters, attrs: &'a HashMap<String, String>) {
+    fn handle_other_oom<'a>(meters: Meters, actor: &'a shiplift::rep::Actor) {
         let meters = meters.read().unwrap();
         let mut meter = meters["."].lock().unwrap();
         meter.tick();
@@ -302,7 +302,7 @@ impl DockerOOM {
             let transition = meter.state.escalate(20);
             if transition == AnomalyTransition::Fixing {
                 // ? How to add delay between fixes
-                DockerOOM::fix_it(e.actor.id);
+                DockerOOM::fix_it(actor.id);
             }
             if transition.is_important() {
                 // TODO notify master
