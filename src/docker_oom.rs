@@ -39,6 +39,7 @@ impl AnomalyTransition {
 }
 
 use std::ops::Shr;
+use std::ops::ShrAssign;
 impl Shr for Anomaly {
     type Output = Option<AnomalyTransition>;
     fn shr(self, rhs: Self) -> Option<AnomalyTransition> {
@@ -71,6 +72,13 @@ impl Shr<AnomalyTransition> for Anomaly {
             (Anomaly::Fixing(_), AnomalyTransition::GaveUp) => Anomaly::OutOfControl,
             _ => self
         }
+    }
+}
+
+impl ShrAssign<AnomalyTransition> for Anomaly {
+    fn shr_assign(&mut self, rhs: AnomalyTransition) {
+        let next = self >> rhs;
+        *self = next;
     }
 }
 
