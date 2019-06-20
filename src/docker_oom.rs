@@ -44,16 +44,32 @@ impl Shr for Anomaly {
     fn shr(self, rhs: Self) -> Option<AnomalyTransition> {
         match (self, rhs) {
             (Anomaly::Negative, Anomaly::Negative) => Some(AnomalyTransition::Normal),
-            (Anomaly::Negative, Anomaly::Positive) => Some(AnomalyTransition::Occurred), // log
+            (Anomaly::Negative, Anomaly::Positive) => Some(AnomalyTransition::Occurred),
             (Anomaly::Positive, Anomaly::Positive) => Some(AnomalyTransition::Unhandled),
-            (Anomaly::Positive, Anomaly::Negative) => Some(AnomalyTransition::Disappeared), // log
+            (Anomaly::Positive, Anomaly::Negative) => Some(AnomalyTransition::Disappeared),
             (Anomaly::Positive, Anomaly::Fixing(1)) => Some(AnomalyTransition::Fixing),
             (Anomaly::Fixing(i), Anomaly::Fixing(j)) if i+1==j => Some(AnomalyTransition::Fixing),
-            (Anomaly::Fixing(_), Anomaly::Negative) => Some(AnomalyTransition::Fixed), // log
-            (Anomaly::Fixing(_), Anomaly::OutOfControl) => Some(AnomalyTransition::GaveUp), // log
-            (Anomaly::OutOfControl, Anomaly::Negative) => Some(AnomalyTransition::Disappeared), // log
+            (Anomaly::Fixing(_), Anomaly::Negative) => Some(AnomalyTransition::Fixed),
+            (Anomaly::Fixing(_), Anomaly::OutOfControl) => Some(AnomalyTransition::GaveUp),
+            (Anomaly::OutOfControl, Anomaly::Negative) => Some(AnomalyTransition::Disappeared),
             (Anomaly::OutOfControl, Anomaly::OutOfControl) => Some(AnomalyTransition::HasGivenUp),
             _ => None
+        }
+    }
+}
+
+impl Shr<AnomalyTransition> for Anomaly {
+    type Output = Anomaly;
+    fn shr(self, rhs: AnomalyTransition) -> Anomaly {
+        match (self, rhs) {
+            (Anomaly::Negative, AnomalyTransition::Occurred) => Anomaly::Positive,
+            (Anomaly::Positive, AnomalyTransition::Disappeared) => Anomaly::Negative,
+            (Anomaly::OutOfControl, AnomalyTransition::Disappeared) => Anomaly::Negative,
+            (Anomaly::Fixing(_), AnomalyTransition::Fixed) => Anomaly::Negative,
+            (Anomaly::Positive, AnomalyTransition::Fixing) => Anomaly::Fixing(1),
+            (Anomaly::Fixing(n), AnomalyTransition::Fixing) => Anomaly::Fixing(n+1),
+            (Anomaly::Fixing(_), AnomalyTransition::GaveUp) => Anomaly::OutOfControl,
+            _ => self
         }
     }
 }
