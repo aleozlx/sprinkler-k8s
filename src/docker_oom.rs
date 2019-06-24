@@ -116,6 +116,7 @@ impl Sprinkler for DockerOOM {
     }
 
     fn activate_agent(&self) {
+        let clone = self.clone();
         let docker = shiplift::Docker::new();
         let mut meters = HashMap::new();
         meters.insert(String::from("!"), Default::default()); // Other types of message flooding
@@ -129,13 +130,13 @@ impl Sprinkler for DockerOOM {
             .for_each({ let meters = meters.clone(); move |e| {
                 if e.typ == "container" && e.action == "oom" {
                     if let Some(pod_name) = e.actor.attributes.get("io.kubernetes.pod.name") {
-                        DockerOOM::handle_anticipated_oom(meters.clone(), pod_name, &e.actor);
+                        clone.handle_anticipated_oom(meters.clone(), pod_name, &e.actor);
                     }
                     else { // The container is not managed by Kubernetes
-                        DockerOOM::handle_other_oom(meters.clone(), &e.actor);
+                        clone.handle_other_oom(meters.clone(), &e.actor);
                     }
                 }
-                else { DockerOOM::handle_other_panic(meters.clone()); }
+                else { clone.handle_other_panic(meters.clone()); }
                 Ok(())
             }})
             .map_err(|e| error!("{}", e));
@@ -148,7 +149,7 @@ impl Sprinkler for DockerOOM {
 }
 
 impl DockerOOM {
-    fn handle_anticipated_oom<'a>(meters: MeterSet, pod_name: &'a str, actor: &'a shiplift::rep::Actor) {
+    fn handle_anticipated_oom<'a>(&self, meters: MeterSet, pod_name: &'a str, actor: &'a shiplift::rep::Actor) {
         let need_new_meter = !meters.read().unwrap().contains_key(pod_name);
         if need_new_meter {
             let meter = (
@@ -190,7 +191,7 @@ impl DockerOOM {
         }
     }
 
-    fn handle_other_oom<'a>(meters: MeterSet, actor: &'a shiplift::rep::Actor) {
+    fn handle_other_oom<'a>(&self, meters: MeterSet, actor: &'a shiplift::rep::Actor) {
         let meters = meters.read().unwrap();
         let mut meter = meters["."].lock().unwrap();
         meter.0.tick();
@@ -216,7 +217,7 @@ impl DockerOOM {
         }
     }
 
-    fn handle_other_panic(meters: MeterSet) {
+    fn handle_other_panic(&self, meters: MeterSet) {
         let meters = meters.read().unwrap();
         let mut meter = meters["."].lock().unwrap();
         meter.0.tick();
