@@ -174,6 +174,15 @@ impl DockerOOM {
                         // Reachable transitions: Occurred, Giveup
                         let mut data_ = HashMap::new();
                         data_.insert(String::from("msg"), format!("DockerOOM {:?}", &transition));
+                        data_.insert(
+                            String::from("io.kubernetes.pod.namespace"),
+                            actor.attributes.get("io.kubernetes.pod.namespace").clone());
+                        data_.insert(
+                            String::from("io.kubernetes.pod.name"),
+                            actor.attributes.get("io.kubernetes.pod.name").clone());
+                        data_.insert(
+                            String::from("io.kubernetes.pod.uid"),
+                            actor.attributes.get("io.kubernetes.pod.uid").clone());
                         Notification{ data: data_ }.send(self.options.master_addr.clone());
                     }
                     meter.0.state >>= transition;
@@ -181,12 +190,23 @@ impl DockerOOM {
             }
             else {
                 let transition = meter.0.state.diminish();
+                let mut data_ = HashMap::new();
+                data_.insert(String::from("msg"), format!("DockerOOM {:?}", &transition));
+                data_.insert(
+                    String::from("io.kubernetes.pod.namespace"),
+                    actor.attributes.get("io.kubernetes.pod.namespace").clone());
+                data_.insert(
+                    String::from("io.kubernetes.pod.name"),
+                    actor.attributes.get("io.kubernetes.pod.name").clone());
+                data_.insert(
+                    String::from("io.kubernetes.pod.uid"),
+                    actor.attributes.get("io.kubernetes.pod.uid").clone());
                 match transition {
                     AnomalyTransition::Disappeared => {
-                        Notification::new().send(self.options.master_addr.clone());
+                        Notification{ data: data_ }.send(self.options.master_addr.clone());
                     }
                     AnomalyTransition::Fixed => {
-                        Notification::new().send(self.options.master_addr.clone());
+                        Notification{ data: data_ }.send(self.options.master_addr.clone());
                     }
                     _ => {}
                 }
