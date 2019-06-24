@@ -287,16 +287,15 @@ impl DockerOOM {
     fn fix_it(&self, id: String) {
         let docker = shiplift::Docker::new();
         let container = shiplift::Container::new(&docker, &id);
-        let id_clone = id.clone();
         let fut_kill = container.kill(None)  // Should send SIGKILL by default
-            .map_err(move |_| {
-                error!("Unable to kill a contianer: {}", &id_clone);
-            })
-            .and_then(move |_| {
+            .map_err({ let id = id.clone(); move |_| {
+                error!("Unable to kill a contianer: {}", &id);
+            }})
+            .and_then({ let id = id.clone(); move |_| {
                 let mut data_ = HashMap::new();
-                data_.insert(String::from("msg"), format!("Killed {}", &id_clone));
+                data_.insert(String::from("msg"), format!("Killed {}", &id));
                 Notification { data: Default::default() }
-            });
+            }});
         tokio::spawn(fut_kill);
     }
 }
