@@ -179,10 +179,10 @@ impl DockerOOM {
                 let transition = meter.0.state.diminish();
                 match transition {
                     AnomalyTransition::Disappeared => {
-                        Notification::new().send();
+                        Notification::new().send(self.options.master_addr.clone());
                     }
                     AnomalyTransition::Fixed => {
-                        Notification::new().send();
+                        Notification::new().send(self.options.master_addr.clone());
                     }
                     _ => {}
                 }
@@ -203,7 +203,7 @@ impl DockerOOM {
                     DockerOOM::fix_it(actor.id.clone());
                 }
                 if transition.is_important() {
-                    Notification::new().send();
+                    Notification::new().send(self.options.master_addr.clone());
                 }
                 meter.0.state >>= transition;
             }
@@ -211,7 +211,7 @@ impl DockerOOM {
         else {
             let transition = meter.0.state.diminish();
             if transition.is_important() {
-                Notification::new().send();
+                Notification::new().send(self.options.master_addr.clone());
             }
             meter.0.state >>= transition;
         }
@@ -224,7 +224,7 @@ impl DockerOOM {
         if meter.0.read() > 70.0 {
             if let Some(transition) = meter.0.state >> Anomaly::Positive {
                 if transition.is_important() {
-                    Notification::new().send();
+                    Notification::new().send(self.options.master_addr.clone());
                 }
                 meter.0.state = Anomaly::Positive;
             }
@@ -232,7 +232,7 @@ impl DockerOOM {
         else {
             let transition = meter.0.state.diminish();
             if transition.is_important() {
-                Notification::new().send();
+                Notification::new().send(self.options.master_addr.clone());
             }
             meter.0.state >>= transition;
         }
