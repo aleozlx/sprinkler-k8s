@@ -265,7 +265,7 @@ impl DockerOOM {
                     // Reachable states: Positive, Fixing(n), Out-of-control
                     // Reachable transitions: Occurred, Giveup
                     let mut data_ = HashMap::new();
-                    data_.insert(String::from("msg"), format!("Docker Panic", &transition));
+                    data_.insert(String::from("msg"), format!("Docker Panic"));
                     Notification{ data: data_ }.send(self.options.master_addr.clone());
                 }
                 meter.0.state = Anomaly::Positive;
@@ -277,7 +277,7 @@ impl DockerOOM {
                 // Reachable states: Negative
                 // Reachable transitions: Fixed, Disappeared
                 let mut data_ = HashMap::new();
-                data_.insert(String::from("msg"), format!("Docker Panic", &transition));
+                data_.insert(String::from("msg"), format!("Docker Panic"));
                 Notification{ data: data_ }.send(self.options.master_addr.clone());
             }
             meter.0.state >>= transition;
