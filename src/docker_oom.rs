@@ -325,7 +325,9 @@ impl Future for Notification {
                 thread::sleep(std::time::Duration::from_secs(clone.options.retry_delay));
                 Ok(Async::NotReady)
             }
-            Ok(Async::Ready(()))
+            else {
+                Ok(Async::Ready(()))
+            }
         }
         else {
             debug!("Connection error, will retry after {} seconds.", clone.options.retry_delay);
