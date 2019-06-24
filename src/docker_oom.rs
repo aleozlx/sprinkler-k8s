@@ -291,9 +291,7 @@ impl DockerOOM {
             .map_err(|_| {
                 Notification { data: Default::default() }
             })
-            .and_then(|_| {
-                Notification { data: Default::default() }
-            });
+            .and_then(Notification { data: Default::default() });
         tokio::spawn(fut_kill);
     }
 }
