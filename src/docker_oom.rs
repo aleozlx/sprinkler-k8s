@@ -289,9 +289,11 @@ impl DockerOOM {
         let container = shiplift::Container::new(&docker, &id);
         let fut_kill = container.kill(None)  // Should send SIGKILL by default
             .map_err(|_| {
-                Notification { data: Default::default() }
+                // Notification { data: Default::default() }
             })
-            .and_then(Notification { data: Default::default() });
+            .and_then(|_| {
+                Notification { data: Default::default() }
+            });
         tokio::spawn(fut_kill);
     }
 }
