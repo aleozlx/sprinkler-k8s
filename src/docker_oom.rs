@@ -229,7 +229,12 @@ impl DockerOOM {
                 if transition.is_important() {
                     // Reachable states: Positive, Fixing(n), Out-of-control
                     // Reachable transitions: Occurred, Giveup
-                    Notification::new().send(self.options.master_addr.clone());
+                    let mut data_ = HashMap::new();
+                    data_.insert(String::from("msg"), format!("DockerOOM {:?}", &transition));
+                    data_.insert(
+                        String::from("name"),
+                        actor.attributes.get("name").unwrap().clone());
+                    Notification{ data: data_ }.send(self.options.master_addr.clone());
                 }
                 meter.0.state >>= transition;
             }
@@ -239,7 +244,12 @@ impl DockerOOM {
             if transition.is_important() {
                 // Reachable states: Negative
                 // Reachable transitions: Fixed, Disappeared
-                Notification::new().send(self.options.master_addr.clone());
+                let mut data_ = HashMap::new();
+                data_.insert(String::from("msg"), format!("DockerOOM {:?}", &transition));
+                data_.insert(
+                    String::from("name"),
+                    actor.attributes.get("name").unwrap().clone());
+                Notification{ data: data_ }.send(self.options.master_addr.clone());
             }
             meter.0.state >>= transition;
         }
