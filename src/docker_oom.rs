@@ -169,7 +169,7 @@ impl DockerOOM {
                         DockerOOM::fix_it(actor.id.clone());
                     }
                     if transition.is_important() {
-                        Notification {}.send();
+                        Notification::new().send();
                     }
                     meter.0.state >>= transition;
                 }
@@ -178,10 +178,10 @@ impl DockerOOM {
                 let transition = meter.0.state.diminish();
                 match transition {
                     AnomalyTransition::Disappeared => {
-                        Notification {}.send();
+                        Notification::new().send();
                     }
                     AnomalyTransition::Fixed => {
-                        Notification {}.send();
+                        Notification::new().send();
                     }
                     _ => {}
                 }
@@ -202,7 +202,7 @@ impl DockerOOM {
                     DockerOOM::fix_it(actor.id.clone());
                 }
                 if transition.is_important() {
-                    Notification {}.send();
+                    Notification::new().send();
                 }
                 meter.0.state >>= transition;
             }
@@ -210,7 +210,7 @@ impl DockerOOM {
         else {
             let transition = meter.0.state.diminish();
             if transition.is_important() {
-                Notification {}.send();
+                Notification::new().send();
             }
             meter.0.state >>= transition;
         }
@@ -223,7 +223,7 @@ impl DockerOOM {
         if meter.0.read() > 70.0 {
             if let Some(transition) = meter.0.state >> Anomaly::Positive {
                 if transition.is_important() {
-                    Notification {}.send();
+                    Notification::new().send();
                 }
                 meter.0.state = Anomaly::Positive;
             }
@@ -231,7 +231,7 @@ impl DockerOOM {
         else {
             let transition = meter.0.state.diminish();
             if transition.is_important() {
-                Notification {}.send();
+                Notification::new().send();
             }
             meter.0.state >>= transition;
         }
