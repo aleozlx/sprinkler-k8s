@@ -313,7 +313,25 @@ impl Future for Notification {
     type Error = ();
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        Ok(Async::Ready(()))
+        let master_addr = clone.options.master_addr.clone();
+        if let Ok(socket) = std::net::TcpStream::connect(&clone.options.master_addr) {
+            let mut tlsbuilder = native_tls::TlsConnector::builder();
+            tlsbuilder.add_root_certificate(native_tls::Certificate::from_pem(include_bytes!("/etc/sprinkler.conf.d/master.crt")).unwrap());
+            let connector = tlsbuilder.build().expect("failed to build a TLS connector");
+            let mut stream = connector.connect(&master_addr.split(":").take(1).collect::<Vec<&str>>()[0], socket).expect("failed to establish a TLS stream");
+            let buf = super::buffer(&clone, String::from(COMMCHK));
+            if let Err(e) = stream.write_all(&buf) {
+                debug!("Failed to send the master thread a message: {}", e);
+                thread::sleep(std::time::Duration::from_secs(clone.options.retry_delay));
+                Ok(Async::NotReady)
+            }
+            Ok(Async::Ready(()))
+        }
+        else {
+            debug!("Connection error, will retry after {} seconds.", clone.options.retry_delay);
+            thread::sleep(std::time::Duration::from_secs(clone.options.retry_delay));
+            Ok(Async::NotReady)
+        }
     }
 }
 
