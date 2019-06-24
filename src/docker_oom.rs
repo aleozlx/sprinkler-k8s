@@ -167,7 +167,7 @@ impl DockerOOM {
                 meter.1.tick();
                 if meter.1.read() { // Hit handling schedule
                     if transition == AnomalyTransition::Fixing {
-                        DockerOOM::fix_it(actor.id.clone());
+                        self.fix_it(actor.id.clone());
                     }
                     if transition.is_important() {
                         // Reachable states: Positive, Fixing(n), Out-of-control
@@ -224,7 +224,7 @@ impl DockerOOM {
             meter.1.tick();
             if meter.1.read() {
                 if transition == AnomalyTransition::Fixing {
-                    DockerOOM::fix_it(actor.id.clone());
+                    self.fix_it(actor.id.clone());
                 }
                 if transition.is_important() {
                     // Reachable states: Positive, Fixing(n), Out-of-control
@@ -284,12 +284,16 @@ impl DockerOOM {
         }
     }
 
-    fn fix_it(id: String) {
+    fn fix_it(&self, id: String) {
         let docker = shiplift::Docker::new();
         let container = shiplift::Container::new(&docker, &id);
         let fut_kill = container.kill(None)  // Should send SIGKILL by default
-            .map_err(|_| {});
-        // TODO report the kill to the master
+            .and_then(|_| {
+                Notification { Default::default() }
+            })
+            .map_err(|_| {
+                Notification { Default::default() }
+            });
         tokio::spawn(fut_kill);
     }
 }
