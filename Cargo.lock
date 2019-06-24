@@ -961,6 +961,7 @@ dependencies = [
  "fern 0.5.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "native-tls 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "shiplift 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sprinkler 0.1.0 (git+https://github.com/aleozlx/sprinkler.git)",
  "sys-info 0.5.7 (registry+https://github.com/rust-lang/crates.io-index)",

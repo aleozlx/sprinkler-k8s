@@ -22,4 +22,5 @@ sys-info = "0.5"
 tokio = "0.1"
 futures = "0.1"
 shiplift = "0.5"
+native-tls = "0.2"
 sprinkler = { git = "https://github.com/aleozlx/sprinkler.git" }
