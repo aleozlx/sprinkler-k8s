@@ -247,8 +247,12 @@ impl DockerOOM {
     }
 }
 
+/// An asynchronous message
+#[derive(Default, Clone, Debug)]
 struct Notification {
-
+    /// Raw data in the notification
+    /// Fields: message, io.kubernetes.pod.{namespace,name,uid}
+    data: HashMap<String, String>
 }
 
 impl Future for Notification {
