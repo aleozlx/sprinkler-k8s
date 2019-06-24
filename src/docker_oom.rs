@@ -176,13 +176,13 @@ impl DockerOOM {
                         data_.insert(String::from("msg"), format!("DockerOOM {:?}", &transition));
                         data_.insert(
                             String::from("io.kubernetes.pod.namespace"),
-                            actor.attributes.get("io.kubernetes.pod.namespace").clone());
+                            actor.attributes.get("io.kubernetes.pod.namespace").unwrap().clone());
                         data_.insert(
                             String::from("io.kubernetes.pod.name"),
-                            actor.attributes.get("io.kubernetes.pod.name").clone());
+                            actor.attributes.get("io.kubernetes.pod.name").unwrap().clone());
                         data_.insert(
                             String::from("io.kubernetes.pod.uid"),
-                            actor.attributes.get("io.kubernetes.pod.uid").clone());
+                            actor.attributes.get("io.kubernetes.pod.uid").unwrap().clone());
                         Notification{ data: data_ }.send(self.options.master_addr.clone());
                     }
                     meter.0.state >>= transition;
@@ -194,13 +194,13 @@ impl DockerOOM {
                 data_.insert(String::from("msg"), format!("DockerOOM {:?}", &transition));
                 data_.insert(
                     String::from("io.kubernetes.pod.namespace"),
-                    actor.attributes.get("io.kubernetes.pod.namespace").clone());
+                    actor.attributes.get("io.kubernetes.pod.namespace").unwrap().clone());
                 data_.insert(
                     String::from("io.kubernetes.pod.name"),
-                    actor.attributes.get("io.kubernetes.pod.name").clone());
+                    actor.attributes.get("io.kubernetes.pod.name").unwrap().clone());
                 data_.insert(
                     String::from("io.kubernetes.pod.uid"),
-                    actor.attributes.get("io.kubernetes.pod.uid").clone());
+                    actor.attributes.get("io.kubernetes.pod.uid").unwrap().clone());
                 match transition {
                     AnomalyTransition::Disappeared => {
                         Notification{ data: data_ }.send(self.options.master_addr.clone());
