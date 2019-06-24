@@ -2,6 +2,7 @@
 extern crate clap;
 #[macro_use]
 extern crate log;
+extern crate naive_tls;
 
 use sprinkler_api::*;
 mod docker_oom;
