@@ -170,7 +170,7 @@ impl DockerOOM {
                         DockerOOM::fix_it(actor.id.clone());
                     }
                     if transition.is_important() {
-                        Notification::new().send();
+                        Notification::new().send(self.options.master_addr.clone());
                     }
                     meter.0.state >>= transition;
                 }
@@ -266,7 +266,7 @@ impl Future for Notification {
 }
 
 impl Notification {
-    pub fn send(self) {
+    pub fn send(self, master_addr: String) {
         tokio::spawn(self);
     }
 
