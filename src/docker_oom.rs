@@ -170,7 +170,11 @@ impl DockerOOM {
                         DockerOOM::fix_it(actor.id.clone());
                     }
                     if transition.is_important() {
-                        Notification::new().send(self.options.master_addr.clone());
+                        // Reachable states: Positive, Fixing(n), Out-of-control
+                        // Reachable transitions: Occurred, Giveup
+                        let mut data_ = HashMap::new();
+                        data_.insert(String::from("msg"), format!("DockerOOM {:?}", &transition));
+                        Notification{ data: data_ }.send(self.options.master_addr.clone());
                     }
                     meter.0.state >>= transition;
                 }
@@ -203,6 +207,8 @@ impl DockerOOM {
                     DockerOOM::fix_it(actor.id.clone());
                 }
                 if transition.is_important() {
+                    // Reachable states: Positive, Fixing(n), Out-of-control
+                    // Reachable transitions: Occurred, Giveup
                     Notification::new().send(self.options.master_addr.clone());
                 }
                 meter.0.state >>= transition;
@@ -211,6 +217,8 @@ impl DockerOOM {
         else {
             let transition = meter.0.state.diminish();
             if transition.is_important() {
+                // Reachable states: Negative
+                // Reachable transitions: Fixed, Disappeared
                 Notification::new().send(self.options.master_addr.clone());
             }
             meter.0.state >>= transition;
@@ -224,6 +232,8 @@ impl DockerOOM {
         if meter.0.read() > 70.0 {
             if let Some(transition) = meter.0.state >> Anomaly::Positive {
                 if transition.is_important() {
+                    // Reachable states: Positive, Fixing(n), Out-of-control
+                    // Reachable transitions: Occurred, Giveup
                     Notification::new().send(self.options.master_addr.clone());
                 }
                 meter.0.state = Anomaly::Positive;
@@ -232,6 +242,8 @@ impl DockerOOM {
         else {
             let transition = meter.0.state.diminish();
             if transition.is_important() {
+                // Reachable states: Negative
+                // Reachable transitions: Fixed, Disappeared
                 Notification::new().send(self.options.master_addr.clone());
             }
             meter.0.state >>= transition;
