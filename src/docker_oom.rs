@@ -123,7 +123,6 @@ impl Sprinkler for DockerOOM {
             Default::default(), // Unidentified OOM
             FrequencyDivider { interval: 15, ..Default::default() }
         )));
-        Arc<RwLock<HashMap<String, Mutex<(EventRateMeter, FrequencyDivider)>>>>
         let meters: MeterSet = Arc::new(RwLock::new(meters));
         let monitor = docker
             .events(&Default::default()) // Stream and filter all docker events
@@ -268,5 +267,9 @@ impl Future for Notification {
 impl Notification {
     pub fn send(self) {
         tokio::spawn(self);
+    }
+
+    pub fn new() -> Self {
+        Default::default()
     }
 }
