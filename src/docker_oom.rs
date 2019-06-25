@@ -325,13 +325,15 @@ impl DockerOOM {
                     error!("Unable to kill a contianer: {}", &id);
                 }
             });
-        let fut_rm = container.remove(Default::default())
-            .map_err({
-                let id = id.clone();
-                move |_| {
-                    error!("Unable to remove a contianer: {}", &id);
-                }
-            });
+        let fut_rm = move |_| {
+            container.remove(Default::default())
+                .map_err({
+                    let id = id.clone();
+                    move |_| {
+                        error!("Unable to remove a contianer: {}", &id);
+                    }
+                })
+        };
         let fut_notify = {
             let container_id = id.clone();
             let sprinkler_id = self.id();
@@ -346,9 +348,7 @@ impl DockerOOM {
                 }
             }
         };
-        let fut_fix = fut_kill.then(move |_| {
-            fut_rm
-        }).and_then(fut_notify);
+        let fut_fix = fut_kill.then(fut_rm).and_then(fut_notify);
         tokio::spawn(fut_fix);
     }
 }
