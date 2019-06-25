@@ -335,7 +335,8 @@ impl DockerOOM {
                         data: data_
                     }
                 }
-            });
+            })
+            .and_then(|_| {});
         tokio::spawn(fut_kill);
     }
 }
