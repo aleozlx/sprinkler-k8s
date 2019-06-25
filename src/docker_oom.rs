@@ -320,19 +320,22 @@ impl DockerOOM {
         let container = shiplift::Container::new(&docker, &id);
         let fut_kill = container.kill(None)  // Should send SIGKILL by default
             .map_err({
-                let id = id.clone();
+                let container_id = id.clone();
                 move |_| {
-                    error!("Unable to kill a contianer: {}", &id);
+                    error!("Unable to kill a contianer: {}", &container_id);
                 }
             });
-        let fut_rm = move |_| {
-            container.remove(Default::default())
-                .map_err({
-                    let id = id.clone();
-                    move |_| {
-                        error!("Unable to remove a contianer: {}", &id);
-                    }
-                })
+        let fut_rm = {
+            let container_id = id.clone(); 
+            move |_| {
+                container.remove(Default::default())
+                    .map_err({
+                        let container_id = container_id.clone();
+                        move |_| {
+                            error!("Unable to remove a contianer: {}", &container_id);
+                        }
+                    })
+            }
         };
         let fut_notify = {
             let container_id = id.clone();
