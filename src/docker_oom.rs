@@ -337,7 +337,7 @@ impl DockerOOM {
                 }
             })
             .and_then(|_| {
-                container.remove(Default::default())
+                container.remove(Default::default()).map_err(|_| {})
             });
         tokio::spawn(fut_kill);
     }
