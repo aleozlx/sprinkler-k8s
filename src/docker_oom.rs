@@ -191,7 +191,7 @@ impl DockerOOM {
                             from: self.id(),
                             to_addr: self.options.master_addr.clone(),
                             data: data_
-                        }.send(self.options.master_addr.clone());
+                        }.send();
                     }
                     meter.0.state >>= transition;
                 }
@@ -215,14 +215,14 @@ impl DockerOOM {
                             from: self.id(),
                             to_addr: self.options.master_addr.clone(),
                             data: data_
-                        }.send(self.options.master_addr.clone());
+                        }.send();
                     }
                     AnomalyTransition::Fixed => {
                         Notification{
                             from: self.id(),
                             to_addr: self.options.master_addr.clone(),
                             data: data_
-                        }.send(self.options.master_addr.clone());
+                        }.send();
                     }
                     _ => {}
                 }
@@ -254,7 +254,7 @@ impl DockerOOM {
                         from: self.id(),
                         to_addr: self.options.master_addr.clone(),
                         data: data_
-                    }.send(self.options.master_addr.clone());
+                    }.send();
                 }
                 meter.0.state >>= transition;
             }
@@ -273,7 +273,7 @@ impl DockerOOM {
                     from: self.id(),
                     to_addr: self.options.master_addr.clone(),
                     data: data_
-                }.send(self.options.master_addr.clone());
+                }.send();
             }
             meter.0.state >>= transition;
         }
@@ -294,7 +294,7 @@ impl DockerOOM {
                         from: self.id(),
                         to_addr: self.options.master_addr.clone(),
                         data: data_
-                    }.send(self.options.master_addr.clone());
+                    }.send();
                 }
                 meter.0.state = Anomaly::Positive;
             }
@@ -310,7 +310,7 @@ impl DockerOOM {
                     from: self.id(),
                     to_addr: self.options.master_addr.clone(),
                     data: data_
-                }.send(self.options.master_addr.clone());
+                }.send();
             }
             meter.0.state >>= transition;
         }
@@ -384,7 +384,7 @@ impl Future for Notification {
 }
 
 impl Notification {
-    pub fn send(self, master_addr: String) {
+    pub fn send(self) {
         tokio::spawn(self);
     }
 }
