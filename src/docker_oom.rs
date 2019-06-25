@@ -108,10 +108,13 @@ impl Sprinkler for DockerOOM {
     fn activate_master(&self) -> ActivationResult {
         let (tx, rx) = futures::sync::mpsc::channel::<Message>(512);
         tokio::run({
-            rx.for_each(|message| {
-                println!("Got new message");
+            rx.for_each({ let clone = self.clone(); move |message| {
+                info!(
+                    "sprinkler[{}] (DockerOOM) {} => {}",
+                    clone.id(), clone.hostname(), message
+                );
                 Ok(())
-            })
+            }})
         });
         ActivationResult::AsyncMonitor(tx)
     }
@@ -361,7 +364,7 @@ impl Future for Notification {
             tlsbuilder.add_root_certificate(native_tls::Certificate::from_pem(include_bytes!("/etc/sprinkler.conf.d/master.crt")).unwrap());
             let connector = tlsbuilder.build().expect("failed to build a TLS connector");
             let mut stream = connector.connect(&&self.to_addr.split(":").take(1).collect::<Vec<&str>>()[0], socket).expect("failed to establish a TLS stream");
-            let buf = super::compose_message(self.from, String::from("Test message")); // TODO compose message
+            let buf = super::compose_message(self.from, self.to_string());
             if let Err(e) = stream.write_all(&buf) {
                 debug!("Failed to send the master thread a message: {}", e);
                 thread::sleep(std::time::Duration::from_secs(RETRY_DELAY));
@@ -376,6 +379,10 @@ impl Future for Notification {
             thread::sleep(std::time::Duration::from_secs(RETRY_DELAY));
             Ok(Async::NotReady)
         }
+    }
+
+    fn to_string(&self) -> String {
+        String::from(self.data.iter().map(|(k, v)| format!("{} = {}", k, v)).collect::<Vec<String>>().join("\n"))
     }
 }
 
