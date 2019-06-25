@@ -330,7 +330,8 @@ impl DockerOOM {
             move |_| {
                 let docker = shiplift::Docker::new();
                 let container = shiplift::Container::new(&docker, &container_id);
-                container.remove(Default::default())
+                let rmOptions = shiplift::builder::RmContainerOptionsBuilder::default().force(true).build();
+                container.remove(rmOptions)
                     .map_err({
                         let container_id = container_id.clone();
                         move |_| {
