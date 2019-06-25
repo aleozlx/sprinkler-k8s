@@ -119,6 +119,7 @@ impl Sprinkler for DockerOOM {
     }
 
     fn activate_agent(&self) {
+        return;
         let clone = self.clone();
         let docker = shiplift::Docker::new();
         let mut meters = HashMap::new();
