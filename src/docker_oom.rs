@@ -347,10 +347,8 @@ impl DockerOOM {
             }
         };
         let fut_fix = fut_kill.then(move |_| {
-            tokio::spawn(fut_rm);
-        }).and_then(move |_| {
-            tokio::spawn(fut_notify);
-        });
+            fut_rm
+        }).and_then(fut_notify);
         tokio::spawn(fut_fix);
     }
 }
