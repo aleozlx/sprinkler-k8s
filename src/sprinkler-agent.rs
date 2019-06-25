@@ -33,7 +33,7 @@ fn main() {
         Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-8.dsa.lan"))),
         Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-9.dsa.lan"))),
 
-        Box::new(builder.build::<DockerOOM>(String::from("k-prod-cpu-1.dsa.lan"))),
+        // Box::new(builder.build::<DockerOOM>(String::from("k-prod-cpu-1.dsa.lan"))),
         Box::new(builder.build::<DockerOOM>(String::from("k-prod-cpu-2.dsa.lan"))),
         Box::new(builder.build::<DockerOOM>(String::from("k-prod-cpu-3.dsa.lan"))),
         Box::new(builder.build::<DockerOOM>(String::from("k-prod-cpu-4.dsa.lan"))),
