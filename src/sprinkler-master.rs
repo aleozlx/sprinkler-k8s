@@ -18,6 +18,8 @@ fn main() {
     
     config::setup_logger(args.occurrences_of("VERBOSE")).expect("Logger Error.");
 
+    let mut rt = tokio::runtime::Runtime::new().unwrap();
+
     const MASTER_ADDR: &str = "bridge.dsa.lan:3777";
     let mut builder = SprinklerBuilder::new(SprinklerOptions{ master_addr: String::from(MASTER_ADDR), ..Default::default() });
 
@@ -48,4 +50,6 @@ fn main() {
     switch.connect_all(&sprinklers);
     let addr = "0.0.0.0:3777".parse().unwrap();
     sprinkler_api::server(&addr, &switch);
+    
+    rt.shutdown_on_idle().wait().unwrap();
 }
