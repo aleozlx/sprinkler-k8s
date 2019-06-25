@@ -326,11 +326,11 @@ impl DockerOOM {
                 }
             });
         let fut_rm = {
-            let container_id = id.clone(); 
+            let container_clone = container.clone();
             move |_| {
-                container.remove(Default::default())
+                container_clone.remove(Default::default())
                     .map_err({
-                        let container_id = container_id.clone();
+                        let container_id = container_clone.id.clone();
                         move |_| {
                             error!("Unable to remove a contianer: {}", &container_id);
                         }
