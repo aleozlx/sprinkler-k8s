@@ -23,15 +23,15 @@ fn main() {
 
     // parse FNAME_CONFIG and add triggers
     let sprinklers: Vec<Box<dyn Sprinkler>> = vec![
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-1.dsa.lan"))),
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-2.dsa.lan"))),
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-3.dsa.lan"))),
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-4.dsa.lan"))),
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-5.dsa.lan"))),
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-6.dsa.lan"))),
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-7.dsa.lan"))),
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-8.dsa.lan"))),
-        Box::new(builder.build::<CommCheck>(String::from("k-prod-cp-9.dsa.lan"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-1.dsa.lan"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-2.dsa.lan"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-3.dsa.lan"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-4.dsa.lan"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-5.dsa.lan"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-6.dsa.lan"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-7.dsa.lan"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-8.dsa.lan"))),
+        Box::new(builder.build::<CommCheck>(String::from("k-prod-cpu-9.dsa.lan"))),
 
         Box::new(builder.build::<DockerOOM>(String::from("k-prod-cpu-1.dsa.lan"))),
         Box::new(builder.build::<DockerOOM>(String::from("k-prod-cpu-2.dsa.lan"))),
