@@ -377,6 +377,8 @@ impl Future for Notification {
     type Error = ();
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        debug!("Trying to connect to {}", &self.to_addr);
+    
         if let Ok(socket) = std::net::TcpStream::connect(&self.to_addr) {
             let mut tlsbuilder = native_tls::TlsConnector::builder();
             tlsbuilder.add_root_certificate(native_tls::Certificate::from_pem(include_bytes!("/etc/sprinkler.conf.d/master.crt")).unwrap());
