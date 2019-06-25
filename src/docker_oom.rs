@@ -319,27 +319,35 @@ impl DockerOOM {
         let docker = shiplift::Docker::new();
         let container = shiplift::Container::new(&docker, &id);
         let fut_kill = container.kill(None)  // Should send SIGKILL by default
-            .map_err({ let id = id.clone(); move |_| {
-                error!("Unable to kill a contianer: {}", &id);
-            }})
-            .and_then({
-                let container_id = id.clone();
-                let sprinkler_id = self.id();
-                let master_addr = self.options.master_addr.clone();
+            .map_err({
+                let id = id.clone();
                 move |_| {
-                    let mut data_ = HashMap::new();
-                    data_.insert(String::from("msg"), format!("Killed {}", &container_id));
-                    Notification {
-                        from: sprinkler_id,
-                        to_addr: master_addr,
-                        data: data_
-                    }
+                    error!("Unable to kill a contianer: {}", &id);
                 }
-            })
-            .and_then(|_| {
-                container.remove(Default::default()).map_err(|_| {})
             });
-        tokio::spawn(fut_kill);
+        let fut_rm = container.remove(Default::default())
+            .map_err({
+                let id = id.clone();
+                move |_| {
+                    error!("Unable to remove a contianer: {}", &id);
+                }
+            });
+        let fut_notify = {
+            let container_id = id.clone();
+            let sprinkler_id = self.id();
+            let master_addr = self.options.master_addr.clone();
+            move |_| {
+                let mut data_ = HashMap::new();
+                data_.insert(String::from("msg"), format!("Killed & Removed {}", &container_id));
+                Notification {
+                    from: sprinkler_id,
+                    to_addr: master_addr,
+                    data: data_
+                }
+            }
+        };
+        let fut_fix = fut_kill.and_then(fut_rm).and_then(fut_notify);
+        tokio::spawn(fut_fix);
     }
 }
 
