@@ -184,7 +184,11 @@ impl DockerOOM {
                         data_.insert(
                             String::from("io.kubernetes.pod.uid"),
                             actor.attributes.get("io.kubernetes.pod.uid").unwrap().clone());
-                        Notification{ data: data_ }.send(self.options.master_addr.clone());
+                        Notification{
+                            from: self.id(),
+                            to_addr: self.options.master_addr.clone(),
+                            data: data_
+                        }.send(self.options.master_addr.clone());
                     }
                     meter.0.state >>= transition;
                 }
@@ -204,10 +208,18 @@ impl DockerOOM {
                     actor.attributes.get("io.kubernetes.pod.uid").unwrap().clone());
                 match transition {
                     AnomalyTransition::Disappeared => {
-                        Notification{ data: data_ }.send(self.options.master_addr.clone());
+                        Notification{
+                            from: self.id(),
+                            to_addr: self.options.master_addr.clone(),
+                            data: data_
+                        }.send(self.options.master_addr.clone());
                     }
                     AnomalyTransition::Fixed => {
-                        Notification{ data: data_ }.send(self.options.master_addr.clone());
+                        Notification{
+                            from: self.id(),
+                            to_addr: self.options.master_addr.clone(),
+                            data: data_
+                        }.send(self.options.master_addr.clone());
                     }
                     _ => {}
                 }
@@ -235,7 +247,11 @@ impl DockerOOM {
                     data_.insert(
                         String::from("name"),
                         actor.attributes.get("name").unwrap().clone());
-                    Notification{ data: data_ }.send(self.options.master_addr.clone());
+                    Notification{
+                        from: self.id(),
+                        to_addr: self.options.master_addr.clone(),
+                        data: data_
+                    }.send(self.options.master_addr.clone());
                 }
                 meter.0.state >>= transition;
             }
@@ -250,7 +266,11 @@ impl DockerOOM {
                 data_.insert(
                     String::from("name"),
                     actor.attributes.get("name").unwrap().clone());
-                Notification{ data: data_ }.send(self.options.master_addr.clone());
+                Notification{
+                    from: self.id(),
+                    to_addr: self.options.master_addr.clone()
+                    data: data_
+                }.send(self.options.master_addr.clone());
             }
             meter.0.state >>= transition;
         }
@@ -267,7 +287,11 @@ impl DockerOOM {
                     // Reachable transitions: Occurred, Giveup
                     let mut data_ = HashMap::new();
                     data_.insert(String::from("msg"), format!("Docker Panic"));
-                    Notification{ data: data_ }.send(self.options.master_addr.clone());
+                    Notification{
+                        from: self.id(),
+                        to_addr: self.options.master_addr.clone(),
+                        data: data_
+                    }.send(self.options.master_addr.clone());
                 }
                 meter.0.state = Anomaly::Positive;
             }
@@ -279,7 +303,11 @@ impl DockerOOM {
                 // Reachable transitions: Fixed, Disappeared
                 let mut data_ = HashMap::new();
                 data_.insert(String::from("msg"), format!("Docker Panic"));
-                Notification{ data: data_ }.send(self.options.master_addr.clone());
+                Notification{
+                    from: self.id(),
+                    to_addr: self.options.master_addr.clone()
+                    data: data_
+                }.send(self.options.master_addr.clone());
             }
             meter.0.state >>= transition;
         }
@@ -295,18 +323,27 @@ impl DockerOOM {
             .and_then({ let id = id.clone(); move |_| {
                 let mut data_ = HashMap::new();
                 data_.insert(String::from("msg"), format!("Killed {}", &id));
-                Notification { data: Default::default() }
+                Notification {
+                    from: self.id(),
+                    to_addr: self.options.master_addr.clone(),
+                    data: data_
+                }
             }});
         tokio::spawn(fut_kill);
     }
 }
 
+const RETRY_DELAY: u64 = 20;
+
 /// An asynchronous message
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 struct Notification {
     /// Raw data in the notification
     /// Fields: message, io.kubernetes.pod.{namespace,name,uid}
-    data: HashMap<String, String>
+    data: HashMap<String, String>,
+
+    from: usize,
+    to_addr: String,
 }
 
 impl Future for Notification {
@@ -314,16 +351,15 @@ impl Future for Notification {
     type Error = ();
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let master_addr = clone.options.master_addr.clone();
-        if let Ok(socket) = std::net::TcpStream::connect(&clone.options.master_addr) {
+        if let Ok(socket) = std::net::TcpStream::connect(&self.to_addr) {
             let mut tlsbuilder = native_tls::TlsConnector::builder();
             tlsbuilder.add_root_certificate(native_tls::Certificate::from_pem(include_bytes!("/etc/sprinkler.conf.d/master.crt")).unwrap());
             let connector = tlsbuilder.build().expect("failed to build a TLS connector");
-            let mut stream = connector.connect(&master_addr.split(":").take(1).collect::<Vec<&str>>()[0], socket).expect("failed to establish a TLS stream");
-            let buf = super::buffer(&clone, String::from(COMMCHK));
+            let mut stream = connector.connect(&&self.to_addr.split(":").take(1).collect::<Vec<&str>>()[0], socket).expect("failed to establish a TLS stream");
+            let buf = super::compose_message(self.from, String::from("Test message")); // TODO compose message
             if let Err(e) = stream.write_all(&buf) {
                 debug!("Failed to send the master thread a message: {}", e);
-                thread::sleep(std::time::Duration::from_secs(clone.options.retry_delay));
+                thread::sleep(std::time::Duration::from_secs(RETRY_DELAY));
                 Ok(Async::NotReady)
             }
             else {
@@ -331,8 +367,8 @@ impl Future for Notification {
             }
         }
         else {
-            debug!("Connection error, will retry after {} seconds.", clone.options.retry_delay);
-            thread::sleep(std::time::Duration::from_secs(clone.options.retry_delay));
+            debug!("Connection error, will retry after {} seconds.", RETRY_DELAY);
+            thread::sleep(std::time::Duration::from_secs(RETRY_DELAY));
             Ok(Async::NotReady)
         }
     }
@@ -341,9 +377,5 @@ impl Future for Notification {
 impl Notification {
     pub fn send(self, master_addr: String) {
         tokio::spawn(self);
-    }
-
-    pub fn new() -> Self {
-        Default::default()
     }
 }
