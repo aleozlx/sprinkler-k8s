@@ -144,7 +144,7 @@ impl Sprinkler for DockerOOM {
                 Ok(())
             }})
             .map_err(|e| error!("{}", e));
-        tokio::run(monitor);
+        tokio::spawn(monitor);
     }
 
     fn deactivate(&self) {
@@ -331,8 +331,8 @@ impl DockerOOM {
             move |_| {
                 let docker = shiplift::Docker::new();
                 let container = shiplift::Container::new(&docker, &container_id);
-                let rmOptions = shiplift::builder::RmContainerOptionsBuilder::default().force(true).build();
-                container.remove(rmOptions)
+                let rm_options = shiplift::builder::RmContainerOptionsBuilder::default().force(true).build();
+                container.remove(rm_options)
                     .map_err({
                         let container_id = container_id.clone();
                         move |_| {
