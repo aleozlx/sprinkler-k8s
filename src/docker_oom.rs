@@ -268,7 +268,7 @@ impl DockerOOM {
                     actor.attributes.get("name").unwrap().clone());
                 Notification{
                     from: self.id(),
-                    to_addr: self.options.master_addr.clone()
+                    to_addr: self.options.master_addr.clone(),
                     data: data_
                 }.send(self.options.master_addr.clone());
             }
@@ -305,7 +305,7 @@ impl DockerOOM {
                 data_.insert(String::from("msg"), format!("Docker Panic"));
                 Notification{
                     from: self.id(),
-                    to_addr: self.options.master_addr.clone()
+                    to_addr: self.options.master_addr.clone(),
                     data: data_
                 }.send(self.options.master_addr.clone());
             }
@@ -320,15 +320,20 @@ impl DockerOOM {
             .map_err({ let id = id.clone(); move |_| {
                 error!("Unable to kill a contianer: {}", &id);
             }})
-            .and_then({ let id = id.clone(); move |_| {
-                let mut data_ = HashMap::new();
-                data_.insert(String::from("msg"), format!("Killed {}", &id));
-                Notification {
-                    from: self.id(),
-                    to_addr: self.options.master_addr.clone(),
-                    data: data_
+            .and_then({
+                let container_id = id.clone();
+                let sprinkler_id = self.id();
+                let master_addr = self.options.master_addr.clone();
+                move |_| {
+                    let mut data_ = HashMap::new();
+                    data_.insert(String::from("msg"), format!("Killed {}", &container_id));
+                    Notification {
+                        from: sprinkler_id,
+                        to_addr: master_addr,
+                        data: data_
+                    }
                 }
-            }});
+            });
         tokio::spawn(fut_kill);
     }
 }
