@@ -939,7 +939,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "sprinkler"
 version = "0.1.0"
-source = "git+https://github.com/aleozlx/sprinkler.git#da5708afa9c16d27f3a630507f8cf67deb4560c3"
+source = "git+https://github.com/aleozlx/sprinkler.git#96b70267d0bc99ab9104e9574ee7d64d28f5b523"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
