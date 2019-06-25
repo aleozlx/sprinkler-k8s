@@ -3,6 +3,8 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 
+use futures::future::Future;
+
 use sprinkler_api::*;
 mod docker_oom;
 use docker_oom::DockerOOM;
