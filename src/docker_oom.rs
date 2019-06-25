@@ -106,7 +106,7 @@ impl Sprinkler for DockerOOM {
 
     fn activate_master(&self) -> ActivationResult {
         let (tx, rx) = futures::sync::mpsc::channel::<Message>(512);
-        tokio::run({
+        tokio::spawn({
             rx.for_each({ let clone = self.clone(); move |message| {
                 info!(
                     "sprinkler[{}] (DockerOOM) {}:\n{}",
