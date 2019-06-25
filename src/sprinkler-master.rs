@@ -20,7 +20,7 @@ fn main() {
     
     config::setup_logger(args.occurrences_of("VERBOSE")).expect("Logger Error.");
 
-    tokio::run(future::lazy(|| {
+    tokio::run(futures::future::lazy(|| {
         const MASTER_ADDR: &str = "bridge.dsa.lan:3777";
         let mut builder = SprinklerBuilder::new(SprinklerOptions{ master_addr: String::from(MASTER_ADDR), ..Default::default() });
 
