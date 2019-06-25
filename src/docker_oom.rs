@@ -231,10 +231,12 @@ impl DockerOOM {
     }
 
     fn handle_other_oom<'a>(&self, meters: MeterSet, actor: &'a shiplift::rep::Actor) {
+        debug!("handle_other_oom");
         let meters = meters.read().unwrap();
         let mut meter = meters["."].lock().unwrap();
         meter.0.tick();
         if meter.0.read() > 10.0 {
+            debug!("meter.0");
             let transition = meter.0.state.escalate(20);
             meter.1.tick();
             if meter.1.read() {
