@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::collections::HashMap;
 use tokio::prelude::*;
-use super::*;
+use sprinkler_api::*;
 
 #[derive(Clone)]
 pub struct DockerOOM {
@@ -387,7 +387,7 @@ impl Future for Notification {
             let connector = tlsbuilder.build().expect("failed to build a TLS connector");
             let mut stream = connector.connect(&&self.to_addr.split(":").take(1).collect::<Vec<&str>>()[0], socket).expect("failed to establish a TLS stream");
             let serialized = String::from(self.data.iter().map(|(k, v)| format!("{} = {}", k, v)).collect::<Vec<String>>().join("\n"));
-            let buf = super::compose_message(self.from, serialized);
+            let buf = sprinkler_api::compose_message(self.from, serialized);
             if let Err(e) = stream.write_all(&buf) {
                 debug!("Failed to send the master thread a message: {}", e);
                 thread::sleep(std::time::Duration::from_secs(RETRY_DELAY));

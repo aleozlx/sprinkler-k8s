@@ -3,7 +3,8 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 
-use futures::future::Future;
+use sprinkler_api::{Switch};
+mod docker_oom;
 mod config;
 
 fn main() {
@@ -16,7 +17,7 @@ fn main() {
     config::setup_logger(args.occurrences_of("VERBOSE")).expect("Logger Error.");
 
     tokio::run(futures::future::lazy(|| {
-        let sprinklers: Vec<Box<dyn Sprinkler>> = config::get_sprinklers();
+        let sprinklers = config::get_sprinklers();
         let switch = Switch::new();
         switch.connect_all(&sprinklers);
         let addr = "0.0.0.0:3777".parse().unwrap();

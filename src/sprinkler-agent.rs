@@ -3,6 +3,7 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 
+mod docker_oom;
 mod config;
 
 fn main() {
@@ -15,7 +16,7 @@ fn main() {
     config::setup_logger(args.occurrences_of("VERBOSE")).expect("Logger Error.");
 
     tokio::run(futures::future::lazy(|| {
-        let sprinklers: Vec<Box<dyn Sprinkler>> = config::get_sprinklers();
+        let sprinklers = config::get_sprinklers();
         sprinkler_api::agent(&sprinklers);
         Ok(())
     }));
