@@ -151,6 +151,7 @@ fn test_event_rate_gt70_hz_2_high_count() {
 struct FrequencyDivider {
     count: usize,             // Event counter
     interval: usize,          // Reset interval
+    output: i32               // Output event
 }
 
 impl FrequencyDivider {
@@ -159,13 +160,48 @@ impl FrequencyDivider {
         self.count += 1;
         if self.count == self.interval {
             self.count = 0;
+            self.output += 1;
         }
     }
 
-    /// Output event
-    pub fn read(&self) -> bool {
-        self.count == 0
+    /// Dequeue an output event if any
+    pub fn read(&mut self) -> bool {
+        if self.output > 0 {
+            self.output -= 1;
+            true
+        }
+        else { false }
     }
+}
+
+#[test]
+fn test_freq_divider_1() {
+    let mut meter = FrequencyDivider { interval: 10, ..Default::default() };
+    for _ in 0..25 {
+        meter.tick();
+    }
+
+    assert_eq!(vec![true, true, false, false], (0..4).map(|_| meter.read()).collect::<Vec<bool>>());
+}
+
+#[test]
+fn test_freq_divider_2() {
+    let mut meter = FrequencyDivider { interval: 10, ..Default::default() };
+    for _ in 0..15 {
+        meter.tick();
+    }
+
+    assert_eq!(vec![true, false, false, false], (0..4).map(|_| meter.read()).collect::<Vec<bool>>());
+}
+
+#[test]
+fn test_freq_divider_3() {
+    let mut meter = FrequencyDivider { interval: 10, ..Default::default() };
+    for _ in 0..5 {
+        meter.tick();
+    }
+
+    assert_eq!(vec![false, false, false, false], (0..4).map(|_| meter.read()).collect::<Vec<bool>>());
 }
 
 impl ImportantExt for AnomalyTransition {
