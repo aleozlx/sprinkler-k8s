@@ -166,6 +166,7 @@ impl FrequencyDivider {
 
     /// Dequeue an output event if any
     pub fn read(&mut self) -> bool {
+        if self.interval == 0 { return true; } // Edge case: no frequency division by default
         if self.output > 0 {
             self.output -= 1;
             true
@@ -205,7 +206,7 @@ fn test_freq_divider_3() {
 }
 
 #[test]
-fn test_combo_gt5_hz_1() {
+fn test_combo_1() {
     let mut meter = EventRateMeter::default();
     let mut divider = FrequencyDivider { interval: 4, ..Default::default() };
 
@@ -224,7 +225,7 @@ fn test_combo_gt5_hz_1() {
 
 #[test]
 #[should_panic]
-fn test_combo_gt5_hz_2() {
+fn test_combo_2() {
     let mut meter = EventRateMeter::default();
     let mut divider = FrequencyDivider { interval: 4, ..Default::default() };
 
@@ -239,6 +240,43 @@ fn test_combo_gt5_hz_2() {
     }
 
     assert!(meter.read() > 18.6);
+}
+
+#[test]
+fn test_combo_passthru_1() {
+    let mut meter = EventRateMeter::default();
+    let mut divider = FrequencyDivider::default();
+
+    let duration = std::time::Duration::from_millis(12); // 83.3Hz
+    // Frequency generator
+    for _ in 0..100 {
+        divider.tick();
+        if divider.read() {
+            meter.tick();
+        }
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 70.0);
+}
+
+#[test]
+#[should_panic]
+fn test_combo_passthru_2() {
+    let mut meter = EventRateMeter::default();
+    let mut divider = FrequencyDivider::default();
+
+    let duration = std::time::Duration::from_millis(14); // 71.4Hz
+    // Frequency generator
+    for _ in 0..100 {
+        divider.tick();
+        if divider.read() {
+            meter.tick();
+        }
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 70.0);
 }
 
 impl ImportantExt for AnomalyTransition {
@@ -321,7 +359,7 @@ impl DockerOOM {
         if need_new_meter {
             let meter = (
                 EventRateMeter { count: 1, state: Anomaly::Fixing(1), ..Default::default() }, // Jump to fixing(1) state
-                FrequencyDivider { interval: 15, ..Default::default() } // Divide event frequency by 15
+                FrequencyDivider { interval: 5, ..Default::default() } // Divide event frequency by 5
             );
             meters.write().unwrap().insert(String::from(pod_name), Mutex::new(meter));
         }
