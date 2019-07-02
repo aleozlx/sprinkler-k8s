@@ -335,9 +335,11 @@ impl Sprinkler for DockerOOM {
             .for_each({ let meters = meters.clone(); move |e| {
                 if e.typ == "container" && e.action == "oom" {
                     if let Some(pod_name) = e.actor.attributes.get("io.kubernetes.pod.name") {
+                        trace!("handle_anticipated_oom(.. {} ..)", pod_name);
                         clone.handle_anticipated_oom(meters.clone(), pod_name, &e.actor);
                     }
                     else { // The container is not managed by Kubernetes
+                        trace!("handle_other_oom(..)");
                         clone.handle_other_oom(meters.clone(), &e.actor);
                     }
                 }
@@ -368,6 +370,7 @@ impl DockerOOM {
             let mut meter = meters[pod_name].lock().unwrap();
             meter.0.tick();
             if meter.0.read() > 10.0 { // Event rate > 10 Hz
+                trace!("handle_anticipated_oom(.. {} ..) >> event rate = high", pod_name);
                 let transition = meter.0.state.escalate(20); // 20 retries till declaring out-of-control
                 meter.1.tick();
                 if meter.1.read() { // Hit handling schedule
@@ -433,12 +436,11 @@ impl DockerOOM {
     }
 
     fn handle_other_oom<'a>(&self, meters: MeterSet, actor: &'a shiplift::rep::Actor) {
-        debug!("handle_other_oom");
         let meters = meters.read().unwrap();
         let mut meter = meters["."].lock().unwrap();
         meter.0.tick();
         if meter.0.read() > 10.0 {
-            debug!("meter.0");
+            trace!("handle_other_oom(..) >> event rate = high");
             let transition = meter.0.state.escalate(20);
             meter.1.tick();
             if meter.1.read() {
@@ -520,6 +522,7 @@ impl DockerOOM {
     }
 
     fn fix_it(&self, id: String) {
+        trace!("fix_it({})", id);
         let docker = shiplift::Docker::new();
         let container = shiplift::Container::new(&docker, &id);
         let fut_kill = container.kill(None)  // Should send SIGKILL by default
