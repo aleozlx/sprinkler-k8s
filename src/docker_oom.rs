@@ -204,6 +204,43 @@ fn test_freq_divider_3() {
     assert_eq!(vec![false, false, false, false], (0..4).map(|_| meter.read()).collect::<Vec<bool>>());
 }
 
+#[test]
+fn test_combo_gt5_hz_1() {
+    let mut meter = EventRateMeter::default();
+    let mut divider = FrequencyDivider { interval: 4, ..Default::default() };
+
+    let duration = std::time::Duration::from_millis(12); // 83.3Hz
+    // Frequency generator
+    for _ in 0..100 {
+        divider.tick();
+        if divider.read() {
+            meter.tick();
+        }
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 18.6);
+}
+
+#[test]
+#[should_panic]
+fn test_combo_gt5_hz_2() {
+    let mut meter = EventRateMeter::default();
+    let mut divider = FrequencyDivider { interval: 4, ..Default::default() };
+
+    let duration = std::time::Duration::from_millis(14); // 71.4Hz
+    // Frequency generator
+    for _ in 0..100 {
+        divider.tick();
+        if divider.read() {
+            meter.tick();
+        }
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 18.6);
+}
+
 impl ImportantExt for AnomalyTransition {
     fn is_important(&self) -> bool {
         match self {
