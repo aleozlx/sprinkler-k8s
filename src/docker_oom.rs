@@ -42,18 +42,109 @@ impl EventRateMeter {
         if chrono::Local::now() - self.t0 > self.interval {
             self.last_rate = self.read();
             self.count = 0;
+            self.t0 = chrono::Local::now();
         }
     }
 
     fn dt(&self) -> f32 {
-        (self.interval.num_milliseconds() as f32) / 1e3
+        ((((chrono::Local::now() - self.t0).num_milliseconds()) as f32) / 1e3) + 1e-8
     }
 
     /// Compute event frequency (Hz)
     pub fn read(&self) -> f32 {
-        if self.count < 6 { self.last_rate }
-        else { (self.count as f32) / self.dt() }
+        if chrono::Local::now() - self.t0 < self.interval * 2 {
+            if self.count < 6 && self.last_rate > 0.0 { self.last_rate }
+            else { (self.count as f32) / self.dt() }
+        }
+        else { 0.0 }
     }
+}
+
+#[test]
+fn test_event_rate_gt70_hz_1() {
+    let mut meter = EventRateMeter::default();
+
+    let duration = std::time::Duration::from_millis(13); // 76.9Hz
+    // Frequency generator
+    for _ in 0..25 {
+        meter.tick();
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 70.0);
+}
+
+#[test]
+#[should_panic]
+fn test_event_rate_gt70_hz_2() {
+    let mut meter = EventRateMeter::default();
+
+    let duration = std::time::Duration::from_millis(15); // 66.7Hz
+    // Frequency generator
+    for _ in 0..25 {
+        meter.tick();
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 70.0);
+}
+
+#[test]
+fn test_event_rate_gt70_hz_1_low_count() {
+    let mut meter = EventRateMeter::default();
+
+    let duration = std::time::Duration::from_millis(13); // 76.9Hz
+    // Frequency generator
+    for _ in 0..4 {
+        meter.tick();
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 70.0);
+}
+
+#[test]
+#[should_panic]
+fn test_event_rate_gt70_hz_2_low_count() {
+    let mut meter = EventRateMeter::default();
+
+    let duration = std::time::Duration::from_millis(15); // 66.7Hz
+    // Frequency generator
+    for _ in 0..4 {
+        meter.tick();
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 70.0);
+}
+
+#[test]
+fn test_event_rate_gt70_hz_1_high_count() {
+    let mut meter = EventRateMeter::default();
+
+    let duration = std::time::Duration::from_millis(13); // 76.9Hz
+    // Frequency generator
+    for _ in 0..300 {
+        meter.tick();
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 70.0);
+}
+
+#[test]
+#[should_panic]
+fn test_event_rate_gt70_hz_2_high_count() {
+    let mut meter = EventRateMeter::default();
+
+    let duration = std::time::Duration::from_millis(15); // 66.7Hz
+    // Frequency generator
+    for _ in 0..300 {
+        meter.tick();
+        std::thread::sleep(duration);
+    }
+
+    assert!(meter.read() > 70.0);
 }
 
 #[derive(Default)]
