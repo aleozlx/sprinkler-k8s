@@ -1,0 +1,11 @@
+[Unit]
+Description=Sprinkler Master
+After=network.target
+
+[Service]
+Restart=always
+RestartSec=5
+ExecStart=/usr/local/bin/sprinkler-master
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Sprinkler Agent
+After=network.target
+
+[Service]
+Restart=always
+RestartSec=5
+ExecStart=/usr/local/bin/sprinkler-agent
+
+[Install]
+WantedBy=multi-user.target
